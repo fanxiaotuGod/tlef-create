@@ -1,16 +1,43 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bug, User, ArrowLeft, Mail, Settings, HelpCircle } from 'lucide-react';
+import { Bug, User, ArrowLeft, Mail, Settings, HelpCircle, LogOut } from 'lucide-react';
 import '../styles/components/UserAccount.css';
 
 const UserAccount = () => {
   const navigate = useNavigate();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const [reportData, setReportData] = useState({
     type: 'bug',
     description: '',
     email: ''
   });
+
+  useEffect(() => {
+    // Fetch user data
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/create/auth/me`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authenticated) {
+          setUser(data.user);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch user data:', error);
+    }
+  };
+
+  const handleLogout = () => {
+    // Redirect to logout endpoint
+    window.location.href = `${import.meta.env.VITE_API_URL}/api/create/auth/logout`;
+  };
 
   const handleSubmitReport = () => {
     // Mock report submission
@@ -41,10 +68,18 @@ const UserAccount = () => {
                   <User size={48} />
                 </div>
                 <div className="user-info">
-                  <h2>Guest User</h2>
-                  <p className="user-email">guest@example.com</p>
+                  <h2>{user?.cwlId || 'Loading...'}</h2>
+                  <p className="user-email">{user?.cwlId ? `${user.cwlId}@ubc.ca` : ''}</p>
                 </div>
               </div>
+              <button
+                className="btn btn-outline btn-danger"
+                onClick={handleLogout}
+                style={{ marginLeft: 'auto' }}
+              >
+                <LogOut size={16} />
+                Sign Out
+              </button>
             </div>
           </div>
 
