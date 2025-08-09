@@ -23,9 +23,13 @@ npm install
 
 ### 2. Configure Environment
 ```bash
-# Copy the example environment file and edit it
+# Copy the example environment file to create your local configuration
 cp .env.example .env
-# Edit .env with your configuration
+
+# Edit .env with your specific configuration
+# The .env.example file contains all required variables with default values
+# Update database URLs, SAML settings, and other environment-specific values as needed
+nano .env  # or use your preferred editor (VS Code: code .env)
 ```
 
 ### 3. Start Development
@@ -370,8 +374,14 @@ Format: Return valid JSON array with question objects"
 
 ## ⚙️ Configuration
 
-### Environment Variables (.env)
+### Environment Variables (.env.example → .env)
 
+**First, copy the example file:**
+```bash
+cp .env.example .env
+```
+
+**Then configure your environment:**
 ```bash
 # Server Configuration
 PORT=8051
@@ -519,6 +529,9 @@ npm run staging
 
 **Application Won't Start:**
 ```bash
+# Ensure you have copied and configured your .env file
+ls -la .env .env.example
+
 # Check if required external services are running
 curl http://localhost:27017  # MongoDB (should return connection info)
 curl http://localhost:6333   # Qdrant (should return API response)
