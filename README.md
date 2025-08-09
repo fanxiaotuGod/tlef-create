@@ -58,8 +58,8 @@ This application requires the following external repositories/services to functi
 **Repository Required:** `docker-simple-saml`
 - **Purpose**: SAML 2.0 authentication for UBC CWL login
 - **Required Port**: 8080
-- **GitHub URL**: https://github.com/ubc/docker-simple-saml
-- **Setup**: Must be running before starting the application
+- **GitHub URL**: https://github.com/fanxiaotuGod/docker-simple-saml/tree/tlef-create-integration
+- **Setup**: Clone the `tlef-create-integration` branch and run with docker-compose
 - **Test Accounts**: 
   - Faculty: `faculty` / `faculty`
   - Student: `student` / `student`
@@ -68,7 +68,8 @@ This application requires the following external repositories/services to functi
 **Repository Required:** `tlef-mongodb-docker`
 - **Purpose**: Main application database with user data, quizzes, materials
 - **Required Port**: 27017
-- **GitHub URL**: https://github.com/ubc/tlef-mongodb-docker
+- **GitHub URL**: https://github.com/fanxiaotuGod/tlef-mongodb-docker/tree/tlef-create-integration
+- **Setup**: Clone the `tlef-create-integration` branch with auto-configured database
 - **Features**: 
   - MongoDB 7.0 Community Server
   - Mongo Express web UI (port 8081)
@@ -179,10 +180,18 @@ ollama serve
 
 ### Setup Order
 1. **Install Ollama and Llama model** (see [AI Setup](#-ai-setup))
-2. Start MongoDB: `cd ../tlef-mongodb-docker && docker-compose up -d`
-3. Start Qdrant: `cd ../tlef-qdrant && docker-compose up -d`
-4. Start SAML: `cd ../docker-simple-saml && docker-compose up -d`
-5. Start this application: `npm run dev`
+2. **Clone and start MongoDB**: 
+   ```bash
+   git clone -b tlef-create-integration https://github.com/fanxiaotuGod/tlef-mongodb-docker.git
+   cd tlef-mongodb-docker && docker-compose up -d
+   ```
+3. **Start Qdrant**: `cd ../tlef-qdrant && docker-compose up -d`
+4. **Clone and start SAML**: 
+   ```bash
+   git clone -b tlef-create-integration https://github.com/fanxiaotuGod/docker-simple-saml.git
+   cd docker-simple-saml && docker-compose up -d
+   ```
+5. **Start this application**: `npm run dev`
 
 ## 🎯 Application Features
 
@@ -587,6 +596,22 @@ mongosh "mongodb://tlef-app:tlef-app-2024@localhost:27017/tlef-create"
 # Test Qdrant connection
 curl -H "api-key: super-secret-dev-key" http://localhost:6333/collections
 ```
+
+**External Repository Versions:**
+This application uses pre-configured forks of the external repositories:
+
+**docker-simple-saml (tlef-create-integration branch):**
+- ✅ SAML SP configuration for localhost:8051 callback URLs
+- ✅ Updated docker-compose.yml for proper networking  
+- ✅ UBC CLF theme integration
+- ✅ Ready-to-use with TLEF-CREATE
+
+**tlef-mongodb-docker (tlef-create-integration branch):**  
+- ✅ Added mongo-init.js script to auto-create `tlef-app` user
+- ✅ Database initialization for TLEF-CREATE schema
+- ✅ Pre-configured for immediate use
+
+Clone the specific branches shown in the setup instructions for seamless integration.
 
 ## 🤝 Contributing
 
