@@ -1,8 +1,8 @@
-import { useState } from 'react';
 import { FileText, Link, Check } from 'lucide-react';
+import { Material } from '../services/api';
 import '../styles/components/MaterialAssignment.css';
 
-interface Material {
+interface MaterialUI {
   id: string;
   name: string;
   type: 'pdf' | 'docx' | 'url' | 'text';
@@ -14,40 +14,21 @@ interface MaterialAssignmentProps {
   courseId: string;
   assignedMaterials: string[];
   onAssignedMaterialsChange: (materials: string[]) => void;
+  courseMaterials?: Material[];
 }
 
-const MaterialAssignment = ({ courseId, assignedMaterials, onAssignedMaterialsChange }: MaterialAssignmentProps) => {
-  // Mock materials data - in real app this would come from the course materials
-  const [courseMaterials] = useState<Material[]>([
-    {
-      id: '1',
-      name: 'Geological Survey Report 2024.pdf',
-      type: 'pdf',
-      uploadDate: '2024-01-15',
-      content: 'Comprehensive geological survey...'
-    },
-    {
-      id: '2',
-      name: 'Plate Tectonics Lecture Notes.docx',
-      type: 'docx',
-      uploadDate: '2024-01-14',
-      content: 'Lecture notes on plate tectonics...'
-    },
-    {
-      id: '3',
-      name: 'URL: National Geographic Earth Sciences',
-      type: 'url',
-      uploadDate: '2024-01-13',
-      content: 'https://nationalgeographic.com/earth-sciences'
-    },
-    {
-      id: '4',
-      name: 'Text: Field Observation Guidelines',
-      type: 'text',
-      uploadDate: '2024-01-12',
-      content: 'Guidelines for conducting field observations...'
-    }
-  ]);
+const MaterialAssignment = ({ courseId, assignedMaterials, onAssignedMaterialsChange, courseMaterials: propsCourseMaterials }: MaterialAssignmentProps) => {
+  // Use real materials if provided, otherwise use mock data
+  const materials = propsCourseMaterials || [];
+  
+  // Transform backend materials to match the UI interface
+  const courseMaterials: MaterialUI[] = materials.map(m => ({
+    id: m._id,
+    name: m.name,
+    type: m.type,
+    uploadDate: new Date(m.createdAt).toLocaleDateString(),
+    content: m.content || m.url || m.filePath
+  }));
 
   const handleMaterialToggle = (materialId: string) => {
     if (assignedMaterials.includes(materialId)) {
