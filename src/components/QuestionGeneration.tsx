@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Wand2, Settings, Zap, Gamepad2, GraduationCap, CheckCircle, Edit, Plus, Minus, X } from 'lucide-react';
+import { Wand2, Settings, Zap, Gamepad2, GraduationCap, CheckCircle, Edit } from 'lucide-react';
 import { RootState, AppDispatch } from '../store';
 import { generatePlan, fetchPlans, approvePlan, setCurrentPlan } from '../store/slices/planSlice';
 import { questionsApi, Question } from '../services/api';
 import { usePubSub } from '../hooks/usePubSub';
+import AdvancedEditModal from './AdvancedEditModal';
 import '../styles/components/QuestionGeneration.css';
 
 interface QuestionGenerationProps {
@@ -58,6 +59,8 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
       totalWholeQuiz: 0
     };
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalJustSaved, setModalJustSaved] = useState(false);
 
   // Load existing plans and restore quiz-specific settings when component mounts
   useEffect(() => {
@@ -347,113 +350,7 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
 
 
 
-  // Advanced settings handlers
-  const availableQuestionTypes = [
-    { value: 'multiple-choice', label: 'Multiple Choice' },
-    { value: 'true-false', label: 'True/False' },
-    { value: 'flashcard', label: 'Flashcard' },
-    { value: 'summary', label: 'Summary' },
-    { value: 'discussion', label: 'Discussion' },
-    { value: 'matching', label: 'Matching' },
-    { value: 'ordering', label: 'Ordering' },
-    { value: 'cloze', label: 'Fill in the Blank' }
-  ];
-
-  const addQuestionType = () => {
-    const usedTypes = customFormula.questionTypes.map(qt => qt.type);
-    const availableType = availableQuestionTypes.find(qt => !usedTypes.includes(qt.value));
-    
-    if (availableType) {
-      const newQuestionType: QuestionTypeConfig = {
-        type: availableType.value,
-        count: 1,
-        percentage: 0,
-        scope: 'per-lo',
-        editMode: 'count'
-      };
-      
-      const newTypes = [...customFormula.questionTypes, newQuestionType];
-      setCustomFormula(prev => ({ ...prev, questionTypes: newTypes }));
-      updateTotals(newTypes);
-    }
-  };
-
-  const removeQuestionType = (index: number) => {
-    const newTypes = customFormula.questionTypes.filter((_, i) => i !== index);
-    setCustomFormula(prev => ({ ...prev, questionTypes: newTypes }));
-    updateTotals(newTypes);
-  };
-
-  const updateQuestionType = (index: number, field: 'type' | 'count' | 'percentage' | 'scope' | 'editMode', value: string | number) => {
-    // Create a deep copy to avoid mutating read-only objects
-    const newTypes = customFormula.questionTypes.map((qt, i) => {
-      if (i !== index) return { ...qt }; // Copy other items as-is
-      
-      // Create a new object for the item being updated
-      const updatedType = { ...qt };
-      
-      if (field === 'type') {
-        updatedType.type = value as string;
-      } else if (field === 'count') {
-        updatedType.count = Math.max(0, value as number);
-        // If editing by count, recalculate percentage will be done in updateTotals
-      } else if (field === 'percentage') {
-        updatedType.percentage = Math.max(0, Math.min(100, value as number));
-        // If editing by percentage, recalculate count
-        if (updatedType.editMode === 'percentage') {
-          const perLoTypes = customFormula.questionTypes.filter(qt => qt.scope === 'per-lo');
-          const totalPerLoPercentage = perLoTypes.reduce((sum, qt) => sum + qt.percentage, 0);
-          if (totalPerLoPercentage > 0) {
-            updatedType.count = Math.round((updatedType.percentage / 100) * questionsPerLO);
-          }
-        }
-      } else if (field === 'scope') {
-        updatedType.scope = value as 'per-lo' | 'whole-quiz';
-      } else if (field === 'editMode') {
-        updatedType.editMode = value as 'count' | 'percentage';
-      }
-      
-      return updatedType;
-    });
-    
-    setCustomFormula(prev => ({ ...prev, questionTypes: newTypes }));
-    updateTotals(newTypes);
-  };
-
-  const updateTotals = (questionTypes: QuestionTypeConfig[]) => {
-    // Separate by scope
-    const perLoTypes = questionTypes.filter(qt => qt.scope === 'per-lo');
-    const wholeQuizTypes = questionTypes.filter(qt => qt.scope === 'whole-quiz');
-    
-    // Calculate totals
-    const totalPerLO = perLoTypes.reduce((sum, qt) => sum + qt.count, 0);
-    const totalWholeQuiz = wholeQuizTypes.reduce((sum, qt) => sum + qt.count, 0);
-    const totalQuestions = totalPerLO;
-    
-    // Update percentages for per-LO questions
-    const updatedTypes = questionTypes.map(qt => {
-      if (qt.scope === 'per-lo' && qt.editMode === 'count') {
-        return {
-          ...qt,
-          percentage: totalPerLO > 0 ? Math.round((qt.count / totalPerLO) * 100) : 0
-        };
-      } else if (qt.scope === 'whole-quiz') {
-        return {
-          ...qt,
-          percentage: 0 // Whole quiz questions don't have percentages
-        };
-      }
-      return qt;
-    });
-    
-    setCustomFormula(prev => ({
-      ...prev,
-      questionTypes: updatedTypes,
-      totalQuestions,
-      totalPerLO,
-      totalWholeQuiz
-    }));
-  };
+  // Advanced settings handlers - moved to modal component
 
   // Get approach-specific question type distribution (matches backend)
   const getApproachDistribution = (approach: PedagogicalApproach, questionsPerLO: number) => {
@@ -515,7 +412,13 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
   useEffect(() => {
     console.log('🔄 Approach changed to:', approach, 'questionsPerLO:', questionsPerLO);
     console.log('🔄 Current plan exists:', !!currentPlan, 'has customFormula:', !!(currentPlan && currentPlan.customFormula));
-    console.log('🔄 isUserEditingApproach:', isUserEditingApproach);
+    console.log('🔄 isUserEditingApproach:', isUserEditingApproach, 'modalJustSaved:', modalJustSaved);
+    
+    // Skip if modal was just saved to prevent overriding user changes
+    if (modalJustSaved) {
+      console.log('⏭️ Skipping formula update - modal was just saved');
+      return;
+    }
     
     // Skip if we have a current plan that should restore its own data, UNLESS user is actively editing
     if (currentPlan && currentPlan.customFormula && !isUserEditingApproach) {
@@ -533,7 +436,7 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
       console.log('🎯 New formula:', newFormula);
       setCustomFormula(newFormula);
     }
-  }, [approach, questionsPerLO, currentPlan, isUserEditingApproach]);
+  }, [approach, questionsPerLO, currentPlan, isUserEditingApproach, modalJustSaved]);
 
   // Debug advanced edit visibility
   useEffect(() => {
@@ -627,6 +530,14 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
                       console.log('🎯 Approach selected:', app.id);
                       setIsUserEditingApproach(true);
                       setApproach(app.id);
+                      
+                      // If Custom Formula is selected, automatically open the modal
+                      if (app.id === 'custom') {
+                        setTimeout(() => {
+                          setIsModalOpen(true);
+                        }, 150); // Small delay to allow approach to be set first
+                      }
+                      
                       // Reset the flag after a short delay to allow approach change to process
                       setTimeout(() => setIsUserEditingApproach(false), 100);
                     }}
@@ -640,11 +551,8 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log('🔧 Advanced Edit clicked for approach:', approach);
-                          console.log('🔧 Current customFormula before:', customFormula);
                           setIsUserEditingApproach(true);
-                          setShowAdvancedEdit(true);
-                          // Reset the flag after a short delay
-                          setTimeout(() => setIsUserEditingApproach(false), 100);
+                          setIsModalOpen(true);
                         }}
                       >
                         <Edit size={14} />
@@ -704,191 +612,35 @@ const QuestionGeneration = ({ learningObjectives, assignedMaterials, quizId, onQ
               </div>
             )}
 
-            {/* Advanced Edit Section */}
-            {(approach === 'custom' || showAdvancedEdit) && (
-              <div className="advanced-edit-section">
-                <div className="advanced-header">
-                  <h4>Question Formula Editor</h4>
-                  <div className="advanced-actions">
-                    {approach !== 'custom' && (
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => setShowAdvancedEdit(false)}
-                      >
-                        Simple View
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="formula-info">
-                  <p className="formula-description">
-                    {approach === 'custom' 
-                      ? 'Define your own mix of question types and quantities.'
-                      : `Customize the default ${approach} approach with your preferred question distribution.`
-                    }
-                  </p>
-                </div>
-
-                {/* Question Types Configuration */}
-                <div className="question-types-config">
-                  <div className="config-header">
-                    <h5>Question Type Configuration</h5>
-                    <p>Define how many questions of each type to generate per learning objective</p>
-                  </div>
-                  
-                  {customFormula.questionTypes.map((questionType, index) => (
-                    <div key={index} className="question-type-row">
-                      <div className="question-type-select">
-                        <select
-                          className="select-input"
-                          value={questionType.type}
-                          onChange={(e) => updateQuestionType(index, 'type', e.target.value)}
-                        >
-                          {availableQuestionTypes.map(type => (
-                            <option key={type.value} value={type.value}>
-                              {type.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      {/* Edit Mode Toggle */}
-                      <div className="edit-mode-toggle">
-                        <button
-                          className={`btn btn-sm ${questionType.editMode === 'count' ? 'btn-primary' : 'btn-outline'}`}
-                          onClick={() => updateQuestionType(index, 'editMode', 'count')}
-                        >
-                          #
-                        </button>
-                        <button
-                          className={`btn btn-sm ${questionType.editMode === 'percentage' ? 'btn-primary' : 'btn-outline'}`}
-                          onClick={() => updateQuestionType(index, 'editMode', 'percentage')}
-                        >
-                          %
-                        </button>
-                      </div>
-                      
-                      {/* Count/Percentage Input */}
-                      {questionType.editMode === 'count' ? (
-                        <div className="count-input">
-                          <button
-                            className="btn btn-outline btn-sm counter-btn"
-                            onClick={() => updateQuestionType(index, 'count', questionType.count - 1)}
-                            disabled={questionType.count <= 0}
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="counter-value">{questionType.count}</span>
-                          <button
-                            className="btn btn-outline btn-sm counter-btn"
-                            onClick={() => updateQuestionType(index, 'count', questionType.count + 1)}
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="percentage-input">
-                          <input
-                            type="number"
-                            className="input-sm"
-                            value={questionType.percentage}
-                            onChange={(e) => updateQuestionType(index, 'percentage', parseInt(e.target.value) || 0)}
-                            min="0"
-                            max="100"
-                          />
-                          <span>%</span>
-                        </div>
-                      )}
-
-                      {/* Scope Toggle */}
-                      <div className="scope-toggle">
-                        <button
-                          className={`btn btn-sm ${questionType.scope === 'per-lo' ? 'btn-primary' : 'btn-outline'}`}
-                          onClick={() => updateQuestionType(index, 'scope', 'per-lo')}
-                          title="Per Learning Objective"
-                        >
-                          LO
-                        </button>
-                        <button
-                          className={`btn btn-sm ${questionType.scope === 'whole-quiz' ? 'btn-primary' : 'btn-outline'}`}
-                          onClick={() => updateQuestionType(index, 'scope', 'whole-quiz')}
-                          title="Whole Quiz"
-                        >
-                          Quiz
-                        </button>
-                      </div>
-                      
-                      {customFormula.questionTypes.length > 1 && (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => removeQuestionType(index)}
-                        >
-                          <X size={14} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  
-                  {customFormula.questionTypes.length < availableQuestionTypes.length && (
-                    <button
-                      className="btn btn-outline btn-sm"
-                      onClick={addQuestionType}
-                    >
-                      <Plus size={14} />
-                      Add Question Type
-                    </button>
-                  )}
-                </div>
-
-                {/* Live Preview */}
-                <div className="distribution-preview">
-                  <h5>Live Preview</h5>
-                  
-                  {/* Per-LO Questions */}
-                  {customFormula.questionTypes.filter(qt => qt.scope === 'per-lo').length > 0 && (
-                    <div className="preview-section">
-                      <h6>Per Learning Objective ({customFormula.totalPerLO} questions each)</h6>
-                      <div className="preview-grid">
-                        {customFormula.questionTypes.filter(qt => qt.scope === 'per-lo').map((qt, index) => (
-                          <div key={index} className="preview-item">
-                            <span className="question-type-label">
-                              {availableQuestionTypes.find(t => t.value === qt.type)?.label || qt.type}
-                            </span>
-                            <span className="question-count">{qt.count} questions</span>
-                            <span className="question-source">({qt.percentage}%)</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Whole Quiz Questions */}
-                  {customFormula.questionTypes.filter(qt => qt.scope === 'whole-quiz').length > 0 && (
-                    <div className="preview-section">
-                      <h6>Whole Quiz ({customFormula.totalWholeQuiz} questions total)</h6>
-                      <div className="preview-grid">
-                        {customFormula.questionTypes.filter(qt => qt.scope === 'whole-quiz').map((qt, index) => (
-                          <div key={index} className="preview-item">
-                            <span className="question-type-label">
-                              {availableQuestionTypes.find(t => t.value === qt.type)?.label || qt.type}
-                            </span>
-                            <span className="question-count">{qt.count} questions</span>
-                            <span className="question-source">(whole quiz)</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="total-summary">
-                    <p><strong>Per Learning Objective:</strong> {customFormula.totalPerLO} questions</p>
-                    <p><strong>Whole Quiz:</strong> {customFormula.totalWholeQuiz} questions</p>
-                    <p><strong>Total Quiz Questions:</strong> {(learningObjectives.length * customFormula.totalPerLO) + customFormula.totalWholeQuiz}</p>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Advanced Edit Modal */}
+            <AdvancedEditModal
+              isOpen={isModalOpen}
+              onClose={() => {
+                setIsModalOpen(false);
+                setIsUserEditingApproach(false);
+                // Clear the flag after a delay to prevent overriding
+                setTimeout(() => setModalJustSaved(false), 100);
+              }}
+              customFormula={customFormula}
+              onFormulaChange={(newFormula) => {
+                console.log('🔄 Formula changed in modal:', newFormula);
+                setCustomFormula(newFormula);
+                // Update questionsPerLO to match the formula's totalPerLO
+                setQuestionsPerLO(newFormula.totalPerLO);
+                // Enable showAdvancedEdit to indicate custom settings are active
+                if (approach !== 'custom') {
+                  setShowAdvancedEdit(true);
+                }
+              }}
+              approach={approach}
+              learningObjectivesCount={learningObjectives.length}
+              onSave={() => {
+                console.log('💾 Saving advanced edit changes');
+                setModalJustSaved(true);
+                saveQuizSettings(quizId);
+                setIsUserEditingApproach(false);
+              }}
+            />
 
             {/* Generate Plan Button */}
             <div className="plan-action">

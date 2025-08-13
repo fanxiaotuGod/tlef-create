@@ -139,6 +139,12 @@ const QuizView = () => {
                     }
                   }}
                   courseMaterials={materials}
+                  onNavigateNext={() => {
+                    setActiveTab('objectives');
+                    setTimeout(() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 100);
+                  }}
               />
           )}
 
@@ -148,6 +154,12 @@ const QuizView = () => {
                   objectives={learningObjectives}
                   onObjectivesChange={setLearningObjectives}
                   quizId={quizId!}
+                  onNavigateNext={() => {
+                    setActiveTab('generation');
+                    setTimeout(() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 100);
+                  }}
               />
           )}
 

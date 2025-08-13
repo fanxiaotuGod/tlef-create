@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'react';
 import { FileText, Link, Check } from 'lucide-react';
 import { Material } from '../services/api';
 import '../styles/components/MaterialAssignment.css';
@@ -15,11 +16,14 @@ interface MaterialAssignmentProps {
   assignedMaterials: string[];
   onAssignedMaterialsChange: (materials: string[]) => void;
   courseMaterials?: Material[];
+  onNavigateNext?: () => void;
 }
 
-const MaterialAssignment = ({ courseId, assignedMaterials, onAssignedMaterialsChange, courseMaterials: propsCourseMaterials }: MaterialAssignmentProps) => {
+const MaterialAssignment = ({ courseId, assignedMaterials, onAssignedMaterialsChange, courseMaterials: propsCourseMaterials, onNavigateNext }: MaterialAssignmentProps) => {
   // Use real materials if provided, otherwise use mock data
   const materials = propsCourseMaterials || [];
+  const [showNavigation, setShowNavigation] = useState(false);
+  const navigationRef = useRef<HTMLDivElement>(null);
   
   // Transform backend materials to match the UI interface
   const courseMaterials: MaterialUI[] = materials.map(m => ({
@@ -37,6 +41,30 @@ const MaterialAssignment = ({ courseId, assignedMaterials, onAssignedMaterialsCh
       onAssignedMaterialsChange([...assignedMaterials, materialId]);
     }
   };
+
+  // Effect to handle navigation appearance with smooth scroll
+  useEffect(() => {
+    const shouldShowNav = assignedMaterials.length > 0;
+    
+    if (shouldShowNav && !showNavigation) {
+      // Show navigation section
+      setShowNavigation(true);
+      
+      // Scroll to navigation section after it appears
+      setTimeout(() => {
+        if (navigationRef.current) {
+          navigationRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'start'
+          });
+        }
+      }, 300); // Delay to allow render
+    } else if (!shouldShowNav && showNavigation) {
+      // Hide navigation section
+      setShowNavigation(false);
+    }
+  }, [assignedMaterials.length, showNavigation]);
 
   const getFileIcon = (type: string) => {
     switch (type) {
@@ -137,6 +165,45 @@ const MaterialAssignment = ({ courseId, assignedMaterials, onAssignedMaterialsCh
                     </div>
                 )}
               </div>
+          )}
+
+          {/* Navigation Section */}
+          {showNavigation && (
+            <div 
+              ref={navigationRef}
+              className={`tab-navigation ${assignedMaterials.length > 0 ? 'nav-visible' : 'nav-hidden'}`}
+            >
+              <div className="nav-content">
+                <div className="nav-info">
+                  <h4>Materials Assigned</h4>
+                  <p>You have assigned {assignedMaterials.length} material{assignedMaterials.length !== 1 ? 's' : ''} to this quiz.</p>
+                </div>
+                <div className="nav-actions">
+                  <button 
+                    className="btn btn-primary btn-nav"
+                    onClick={() => {
+                      if (onNavigateNext) {
+                        onNavigateNext();
+                      } else {
+                        // Fallback method
+                        const tabButtons = document.querySelectorAll('button');
+                        const objectivesTab = Array.from(tabButtons).find(button => 
+                          button.textContent?.includes('Learning Objectives')
+                        );
+                        if (objectivesTab) {
+                          objectivesTab.click();
+                          setTimeout(() => {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }, 200);
+                        }
+                      }
+                    }}
+                  >
+                    Next: Set Learning Objectives
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

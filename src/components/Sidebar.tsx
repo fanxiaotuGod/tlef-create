@@ -4,7 +4,7 @@ import { useAppSelector, useAppDispatch } from '../hooks/redux';
 import { setActiveCourse, setActiveQuiz } from '../store/slices/appSlice';
 import { Plus, Search, ChevronDown, ChevronRight, User } from 'lucide-react';
 import CreateCourseModal from './CreateCourseModal';
-import { foldersApi, Folder, ApiError } from '../services/api';
+import { foldersApi, quizApi, materialsApi, Folder, ApiError } from '../services/api';
 import '../styles/components/Sidebar.css';
 
 const Sidebar = () => {
@@ -16,6 +16,7 @@ const Sidebar = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatingQuizForFolder, setCreatingQuizForFolder] = useState<string | null>(null);
 
   useEffect(() => {
     loadFolders();
@@ -55,11 +56,45 @@ const Sidebar = () => {
     navigate(`/course/${courseId}/quiz/${quizId}`);
   };
 
-  const handleCreateCourse = async (courseName: string, quizCount: number) => {
-    console.log('➕ Sidebar: Creating folder:', courseName, 'with', quizCount, 'quizzes');
+  const handleCreateCourse = async (courseName: string, materials: any[] = []) => {
+    console.log('➕ Sidebar: Creating folder:', courseName, 'with default Quiz 1 and', materials.length, 'materials');
     try {
-      const response = await foldersApi.createFolder(courseName, quizCount);
-      console.log('✅ Sidebar: Folder created with quizzes:', response.folder);
+      const response = await foldersApi.createFolder(courseName, 1);
+      console.log('✅ Sidebar: Folder created with Quiz 1:', response.folder);
+      
+      // Upload materials to the created folder
+      if (materials.length > 0) {
+        console.log('📁 Uploading materials to folder:', materials);
+        console.log('📁 Folder ID for upload:', response.folder._id);
+        
+        for (const material of materials) {
+          try {
+            console.log('🔄 Processing material:', material);
+            switch (material.type) {
+              case 'pdf':
+              case 'docx':
+                if (material.file) {
+                  console.log('📄 Uploading file:', material.file.name);
+                  const files = [material.file];
+                  await materialsApi.uploadFiles(response.folder._id, files as any);
+                }
+                break;
+              case 'url':
+                console.log('🔗 Adding URL:', material.content || material.name);
+                await materialsApi.addUrl(response.folder._id, material.content || material.name, material.name);
+                break;
+              case 'text':
+                console.log('📝 Adding text material:', material.name);
+                await materialsApi.addText(response.folder._id, material.content || '', material.name);
+                break;
+            }
+          } catch (materialError) {
+            console.error('❌ Failed to upload material:', material.name, materialError);
+          }
+        }
+        console.log('✅ All materials processed');
+      }
+      
       // Reload folders to get the updated list
       await loadFolders();
     } catch (err) {
@@ -76,6 +111,38 @@ const Sidebar = () => {
     navigate('/account');
   };
 
+  const handleAddQuiz = async (folderId: string) => {
+    if (creatingQuizForFolder) return;
+    
+    setCreatingQuizForFolder(folderId);
+    try {
+      // Find the current folder to get existing quiz count
+      const folder = folders.find(f => f._id === folderId);
+      if (!folder) return;
+      
+      // Generate a name for the new quiz
+      const quizNumber = (folder.quizzes?.length || 0) + 1;
+      const quizName = `Quiz ${quizNumber}`;
+      
+      const response = await quizApi.createQuiz(quizName, folderId);
+      
+      // Reload folders to get the updated quiz list
+      await loadFolders();
+      
+      console.log('✅ Sidebar: Quiz created successfully:', response.quiz);
+      
+    } catch (err) {
+      console.error('❌ Sidebar: Failed to create quiz:', err);
+      if (err instanceof ApiError) {
+        alert(`Failed to create quiz: ${err.message}`);
+      } else {
+        alert('Failed to create quiz. Please try again.');
+      }
+    } finally {
+      setCreatingQuizForFolder(null);
+    }
+  };
+
   return (
       <>
         <div className="sidebar">
@@ -87,7 +154,7 @@ const Sidebar = () => {
                 onClick={() => setShowCreateModal(true)}
             >
               <Plus size={16} />
-              Create Folder
+              Create Course
             </button>
           </div>
 
@@ -160,6 +227,18 @@ const Sidebar = () => {
                                 </div>
                               );
                             })}
+                            
+                            <button 
+                              className={`quiz-add-button ${creatingQuizForFolder === folder._id ? 'loading' : ''}`}
+                              onClick={() => handleAddQuiz(folder._id)}
+                              disabled={creatingQuizForFolder === folder._id}
+                            >
+                              {creatingQuizForFolder === folder._id ? (
+                                <div className="spinner-mini"></div>
+                              ) : (
+                                <Plus size={16} />
+                              )}
+                            </button>
                           </div>
                       )}
                     </div>

@@ -304,14 +304,7 @@
     text-transform: capitalize;
 }
 
-/* Advanced Edit Section */
-.advanced-edit-section {
-    background: var(--color-muted/30);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 1.5rem;
-    margin-top: 1.5rem;
-}
+/* Advanced Edit Section - Now handled by modal */
 
 .advanced-header {
     display: flex;
@@ -336,6 +329,19 @@
 
 .advanced-edit-btn {
     margin-top: 0.75rem;
+}
+
+/* Ensure Advanced Edit button has proper contrast on selected approach card */
+.approach-card.selected .advanced-edit-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.approach-card.selected .advanced-edit-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
 }
 
 .formula-info {

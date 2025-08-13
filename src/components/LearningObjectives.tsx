@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Upload, Sparkles, Edit, Plus, Trash2, RotateCcw, X } from 'lucide-react';
 import { RootState, AppDispatch } from '../store';
@@ -20,9 +20,10 @@ interface LearningObjectivesProps {
   objectives: string[];
   onObjectivesChange: (objectives: string[]) => void;
   quizId: string;
+  onNavigateNext?: () => void;
 }
 
-const LearningObjectives = ({ assignedMaterials, objectives, onObjectivesChange, quizId }: LearningObjectivesProps) => {
+const LearningObjectives = ({ assignedMaterials, objectives, onObjectivesChange, quizId, onNavigateNext }: LearningObjectivesProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const { objectives: reduxObjectives, loading, generating, classifying, error } = useSelector((state: RootState) => state.learningObjective);
   
@@ -32,6 +33,8 @@ const LearningObjectives = ({ assignedMaterials, objectives, onObjectivesChange,
   const [editText, setEditText] = useState('');
   const [manualObjectives, setManualObjectives] = useState<string[]>([]);
   const [newObjective, setNewObjective] = useState('');
+  const [showNavigation, setShowNavigation] = useState(false);
+  const navigationRef = useRef<HTMLDivElement>(null);
 
   // Use Redux objectives if available, otherwise fallback to props
   const currentObjectives = reduxObjectives.length > 0 ? reduxObjectives.map(obj => obj.text) : objectives;
@@ -50,6 +53,30 @@ const LearningObjectives = ({ assignedMaterials, objectives, onObjectivesChange,
       onObjectivesChange(reduxObjectives.map(obj => obj.text));
     }
   }, [reduxObjectives, onObjectivesChange]);
+
+  // Effect to handle navigation appearance with smooth scroll
+  useEffect(() => {
+    const shouldShowNav = objectives.length > 0;
+    
+    if (shouldShowNav && !showNavigation) {
+      // Show navigation section
+      setShowNavigation(true);
+      
+      // Scroll to navigation section after it appears
+      setTimeout(() => {
+        if (navigationRef.current) {
+          navigationRef.current.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'start'
+          });
+        }
+      }, 300); // Delay to allow render
+    } else if (!shouldShowNav && showNavigation) {
+      // Hide navigation section
+      setShowNavigation(false);
+    }
+  }, [objectives.length, showNavigation]);
 
   const handleClassifyObjectives = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -506,6 +533,45 @@ const LearningObjectives = ({ assignedMaterials, objectives, onObjectivesChange,
                   ))}
                 </div>
               </div>
+          )}
+
+          {/* Navigation Section */}
+          {showNavigation && (
+            <div 
+              ref={navigationRef}
+              className={`tab-navigation ${objectives.length > 0 ? 'nav-visible' : 'nav-hidden'}`}
+            >
+              <div className="nav-content">
+                <div className="nav-info">
+                  <h4>Learning Objectives Set</h4>
+                  <p>You have defined {objectives.length} learning objective{objectives.length !== 1 ? 's' : ''} for this quiz.</p>
+                </div>
+                <div className="nav-actions">
+                  <button 
+                    className="btn btn-primary btn-nav"
+                    onClick={() => {
+                      if (onNavigateNext) {
+                        onNavigateNext();
+                      } else {
+                        // Fallback method
+                        const tabButtons = document.querySelectorAll('button');
+                        const questionsTab = Array.from(tabButtons).find(button => 
+                          button.textContent?.includes('Generate Questions')
+                        );
+                        if (questionsTab) {
+                          questionsTab.click();
+                          setTimeout(() => {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }, 200);
+                        }
+                      }
+                    }}
+                  >
+                    Next: Generate Questions
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>
