@@ -8,7 +8,7 @@ global:
 
 # Frontend configuration
 frontend:
-  enabled: true
+  enabled: false  # PHASE 2: Enable after databases are healthy
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend"
@@ -32,7 +32,7 @@ frontend:
 
 # Backend configuration
 backend:
-  enabled: true
+  enabled: false  # PHASE 2: Enable after databases are healthy
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-backend"
@@ -121,7 +121,7 @@ qdrant:
 
 # SAML configuration
 saml:
-  enabled: true
+  enabled: false  # PHASE 3: Enable after application layer is healthy
   image:
     repository: kenchan0130/simplesamlphp
     tag: "2.2.2"
@@ -175,7 +175,7 @@ secrets:
 
 # Monitoring
 monitoring:
-  enabled: true
+  enabled: false  # PHASE 4: Enable after core application is working
   prometheus:
     enabled: true
     image:
