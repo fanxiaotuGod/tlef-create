@@ -67,9 +67,17 @@ jobs:
 
       - name: Update Helm values with new image tags
         run: |
-          # Update values.yaml with new image tags
-          sed -i "s|repository: \".*\"|repository: \"${{ secrets.ECR_FRONTEND_REPOSITORY }}\"|" devops/k8s/helm/tlef-create/values.yaml
-          sed -i "s|tag: \".*\"|tag: \"staging-${{ steps.meta.outputs.sha_short }}\"|" devops/k8s/helm/tlef-create/values.yaml
+          # Update frontend image tag
+          sed -i '/frontend:/,/backend:/{
+            /repository:/ s|repository: ".*"|repository: "${{ secrets.ECR_FRONTEND_REPOSITORY }}"|
+            /tag:/ s|tag: ".*"|tag: "staging-${{ steps.meta.outputs.sha_short }}"|
+          }' devops/k8s/helm/tlef-create/values.yaml
+          
+          # Update backend image tag  
+          sed -i '/backend:/,/env:/{
+            /repository:/ s|repository: ".*"|repository: "${{ secrets.ECR_BACKEND_REPOSITORY }}"|
+            /tag:/ s|tag: ".*"|tag: "staging-${{ steps.meta.outputs.sha_short }}"|
+          }' devops/k8s/helm/tlef-create/values.yaml
 
       - name: Commit and push updated values
         run: |
