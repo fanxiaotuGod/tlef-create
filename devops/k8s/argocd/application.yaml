@@ -1,0 +1,77 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tlef-create-staging
+  namespace: argocd
+  # Finalizer that ensures cascading delete of app resources
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  # The project the application belongs to
+  project: default
+
+  # Source of the application manifests
+  source:
+    repoURL: https://github.com/fanxiaotuGod/tlef-create.git
+    targetRevision: staging  # Branch to track
+    path: devops/k8s/helm/tlef-create  # Path to Helm chart
+
+    # Helm specific configuration
+    helm:
+      # Release name
+      releaseName: tlef-create
+
+      # Values files (in order of precedence)
+      valueFiles:
+        - values.yaml
+
+      # Helm values as a block of yaml
+      values: |
+        global:
+          environment: staging
+          domain: "" # Set this to your domain or leave empty
+
+        # Image repositories will be set by Terraform outputs
+        frontend:
+          image:
+            repository: ""  # Will be updated by CI/CD
+            tag: "latest"   # Will be updated by CI/CD
+
+        backend:
+          image:
+            repository: ""  # Will be updated by CI/CD
+            tag: "latest"   # Will be updated by CI/CD
+
+  # Destination cluster and namespace
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tlef-staging
+
+  # Sync policy
+  syncPolicy:
+    # Automated sync configuration
+    automated:
+      prune: true      # Delete resources that are no longer defined in Git
+      selfHeal: true   # Force desired state even if cluster state changes
+      allowEmpty: false # Don't delete everything if Git is empty
+
+    # Sync options
+    syncOptions:
+      - CreateNamespace=true  # Create namespace if it doesn't exist
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+
+    # Retry strategy
+    retry:
+      limit: 5  # Number of sync retries
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Health check configuration
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas  # Ignore replica count changes (for HPA)

@@ -1,0 +1,78 @@
+{{- if .Values.qdrant.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "tlef-create.qdrant.fullname" . }}
+  labels:
+    {{- include "tlef-create.labels" . | nindent 4 }}
+    component: qdrant
+spec:
+  serviceName: {{ include "tlef-create.qdrant.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "tlef-create.selectorLabels" . | nindent 6 }}
+      component: qdrant
+  template:
+    metadata:
+      labels:
+        {{- include "tlef-create.selectorLabels" . | nindent 8 }}
+        component: qdrant
+    spec:
+      containers:
+        - name: qdrant
+          image: "{{ .Values.qdrant.image.repository }}:{{ .Values.qdrant.image.tag }}"
+          imagePullPolicy: {{ .Values.qdrant.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.qdrant.service.httpPort }}
+            - name: grpc
+              containerPort: {{ .Values.qdrant.service.grpcPort }}
+          env:
+            - name: QDRANT__SERVICE__API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: qdrant-api-key
+          volumeMounts:
+            - name: storage
+              mountPath: /qdrant/storage
+          resources:
+            {{- toYaml .Values.qdrant.resources | nindent 12 }}
+  {{- if .Values.qdrant.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes:
+          - {{ .Values.qdrant.persistence.accessMode }}
+        {{- if .Values.qdrant.persistence.storageClass }}
+        storageClassName: {{ .Values.qdrant.persistence.storageClass | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.qdrant.persistence.size }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tlef-create.qdrant.fullname" . }}
+  labels:
+    {{- include "tlef-create.labels" . | nindent 4 }}
+    component: qdrant
+spec:
+  type: {{ .Values.qdrant.service.type }}
+  ports:
+    - port: {{ .Values.qdrant.service.httpPort }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: {{ .Values.qdrant.service.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+  selector:
+    {{- include "tlef-create.selectorLabels" . | nindent 4 }}
+    component: qdrant
+{{- end }}

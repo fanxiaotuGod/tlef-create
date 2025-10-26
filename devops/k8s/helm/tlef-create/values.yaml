@@ -1,0 +1,233 @@
+# Default values for tlef-create staging deployment
+# This is a YAML-formatted file.
+
+# Global settings
+global:
+  environment: staging
+  domain: "" # Set to your domain (e.g., staging.example.com) or leave empty for IP-based access
+
+# Frontend configuration
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "" # Will be set by Terraform output (e.g., 123456789.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend)
+    tag: "latest" # Will be updated by CI/CD with git SHA
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 80
+
+# Backend configuration
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: "" # Will be set by Terraform output
+    tag: "latest" # Will be updated by CI/CD with git SHA
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8051
+  env:
+    nodeEnv: "production"
+    port: "8051"
+    llmProvider: "openai"
+    openaiModel: "gpt-4o-mini"
+    maxFileSize: "104857600"
+    uploadDir: "/app/routes/create/uploads"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+  persistence:
+    enabled: true
+    storageClass: "" # Use default storage class
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    mountPath: /app/routes/create/uploads
+
+# MongoDB configuration
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "7.0"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 27017
+  auth:
+    username: tlef-app
+    password: "" # Set via secrets
+    database: tlef-create
+  persistence:
+    enabled: true
+    storageClass: "" # Use default storage class
+    accessMode: ReadWriteOnce
+    size: 10Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Qdrant configuration
+qdrant:
+  enabled: true
+  image:
+    repository: qdrant/qdrant
+    tag: "v1.14.1"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    httpPort: 6333
+    grpcPort: 6334
+  apiKey: "" # Set via secrets
+  persistence:
+    enabled: true
+    storageClass: "" # Use default storage class
+    accessMode: ReadWriteOnce
+    size: 10Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "200m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# SAML configuration
+saml:
+  enabled: true
+  image:
+    repository: kenchan0130/simplesamlphp
+    tag: "2.2.2"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  entityId: "https://tlef-create-staging"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx" # K3s includes Traefik by default, but we'll use nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-staging" # For SSL/TLS
+    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Set to "true" when SSL is configured
+  hosts:
+    - host: "" # Leave empty for IP-based access, or set to your domain
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+  tls: []
+  # Uncomment when you have a domain and SSL cert
+  # tls:
+  #   - secretName: tlef-tls
+  #     hosts:
+  #       - staging.example.com
+
+# Secrets (will be created separately or via Sealed Secrets)
+secrets:
+  mongodb:
+    password: "" # Set via kubectl create secret or CI/CD
+  qdrant:
+    apiKey: "" # Set via kubectl create secret or CI/CD
+  backend:
+    sessionSecret: "" # Set via kubectl create secret or CI/CD
+    openaiApiKey: "" # Set via kubectl create secret or CI/CD
+    samlCallbackUrl: ""
+    samlLogoutCallbackUrl: ""
+
+# Monitoring
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    image:
+      repository: prom/prometheus
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 9090
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+  grafana:
+    enabled: true
+    image:
+      repository: grafana/grafana
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    service:
+      type: NodePort # Expose for external access
+      port: 3000
+      nodePort: 30000
+    adminUser: admin
+    adminPassword: "" # Set via secrets
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+
+# Network Policies (optional, for enhanced security)
+networkPolicy:
+  enabled: false
+
+# Pod Security Policy
+podSecurityPolicy:
+  enabled: false
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "tlef-create-sa"

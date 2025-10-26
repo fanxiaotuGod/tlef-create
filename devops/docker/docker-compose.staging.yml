@@ -1,0 +1,166 @@
+version: '3.8'
+
+services:
+  # Frontend (React + Nginx)
+  frontend:
+    build:
+      context: ../..
+      dockerfile: devops/docker/Dockerfile.frontend
+    container_name: tlef-frontend
+    ports:
+      - "80:80"
+    networks:
+      - tlef-network
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Backend (Node.js + Express)
+  backend:
+    build:
+      context: ../..
+      dockerfile: devops/docker/Dockerfile.backend
+    container_name: tlef-backend
+    ports:
+      - "8051:8051"
+    environment:
+      - NODE_ENV=production
+      - PORT=8051
+      - MONGODB_URI=mongodb://tlef-app:tlef-app-staging-2024@mongodb:27017/tlef-create
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-super-secret-staging-key}
+      - SESSION_SECRET=${SESSION_SECRET:-staging-session-secret-change-me}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - SAML_ENTRY_POINT=${SAML_ENTRY_POINT:-http://saml:8080/simplesaml/saml2/idp/SSOService.php}
+      - SAML_LOGOUT_URL=${SAML_LOGOUT_URL:-http://saml:8080/simplesaml/saml2/idp/SingleLogoutService.php}
+      - SAML_ISSUER=${SAML_ISSUER:-https://tlef-create-staging}
+      - SAML_CALLBACK_URL=${SAML_CALLBACK_URL:-http://localhost:8051/api/create/auth/saml/callback}
+      - SAML_LOGOUT_CALLBACK_URL=${SAML_LOGOUT_CALLBACK_URL:-http://localhost:8051/api/create/auth/logout/callback}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - UPLOAD_DIR=/app/routes/create/uploads
+      - MAX_FILE_SIZE=104857600
+    volumes:
+      - backend-uploads:/app/routes/create/uploads
+    networks:
+      - tlef-network
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+      - qdrant
+
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: tlef-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=tlef-app
+      - MONGO_INITDB_ROOT_PASSWORD=tlef-app-staging-2024
+      - MONGO_INITDB_DATABASE=tlef-create
+    volumes:
+      - mongodb-data:/data/db
+      - mongodb-config:/data/configdb
+    networks:
+      - tlef-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.14.1
+    container_name: tlef-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__SERVICE__API_KEY=${QDRANT_API_KEY:-super-secret-staging-key}
+    volumes:
+      - qdrant-storage:/qdrant/storage
+    networks:
+      - tlef-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # SimpleSAMLphp (SAML Authentication)
+  saml:
+    image: kenchan0130/simplesamlphp:2.2.2
+    container_name: tlef-saml
+    ports:
+      - "8080:8080"
+    environment:
+      - SIMPLESAMLPHP_SP_ENTITY_ID=https://tlef-create-staging
+      - SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE=http://localhost:8051/api/create/auth/saml/callback
+      - SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE=http://localhost:8051/api/create/auth/logout/callback
+    networks:
+      - tlef-network
+    restart: unless-stopped
+
+  # Prometheus (Metrics Collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tlef-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+    networks:
+      - tlef-network
+    restart: unless-stopped
+
+  # Grafana (Metrics Visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tlef-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - tlef-network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+networks:
+  tlef-network:
+    driver: bridge
+    name: tlef-staging-network
+
+volumes:
+  mongodb-data:
+    name: tlef-mongodb-data
+  mongodb-config:
+    name: tlef-mongodb-config
+  qdrant-storage:
+    name: tlef-qdrant-storage
+  backend-uploads:
+    name: tlef-backend-uploads
+  prometheus-data:
+    name: tlef-prometheus-data
+  grafana-data:
+    name: tlef-grafana-data

@@ -1,0 +1,29 @@
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to Git!
+
+# AWS Configuration
+aws_region = "us-west-2" # Change to your preferred region
+
+# Project Configuration
+project_name = "tlef-create"
+environment  = "staging"
+
+# SSH Configuration
+# Generate SSH key with: ssh-keygen -t rsa -b 4096 -f ~/.ssh/tlef-create-staging.pem
+# Then paste the PUBLIC key content here (from ~/.ssh/tlef-create-staging.pem.pub)
+ssh_public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQD... your-email@example.com"
+
+# Security Configuration
+# ⚠️ IMPORTANT: Change this to your actual IP address for security!
+# Find your IP: curl ifconfig.me
+allowed_ssh_cidr = ["YOUR.IP.ADDRESS.HERE/32"] # e.g., ["123.456.789.0/32"]
+
+# Instance Configuration
+instance_type      = "t2.micro"       # Free tier eligible
+root_volume_size   = 30               # GB (free tier up to 30 GB)
+allocate_elastic_ip = true            # Recommended for staging
+
+# Optional Configurations
+enable_monitoring              = false # Set to true for detailed CloudWatch monitoring (costs extra)
+enable_termination_protection  = false # Set to true to prevent accidental termination
+ecr_image_retention_count      = 10    # Number of images to keep in ECR

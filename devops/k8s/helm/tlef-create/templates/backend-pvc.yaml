@@ -1,0 +1,18 @@
+{{- if and .Values.backend.enabled .Values.backend.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "tlef-create.backend.fullname" . }}-pvc
+  labels:
+    {{- include "tlef-create.labels" . | nindent 4 }}
+    component: backend
+spec:
+  accessModes:
+    - {{ .Values.backend.persistence.accessMode }}
+  {{- if .Values.backend.persistence.storageClass }}
+  storageClassName: {{ .Values.backend.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.size }}
+{{- end }}

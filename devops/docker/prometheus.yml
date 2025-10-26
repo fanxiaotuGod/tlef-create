@@ -1,0 +1,49 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'tlef-staging'
+    environment: 'staging'
+
+# Alertmanager configuration (optional - for future use)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them
+rule_files:
+  # - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter (if deployed)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: []
+        # Add node-exporter targets here
+        # - 'node-exporter:9100'
+
+  # Backend application metrics (if you add /metrics endpoint)
+  - job_name: 'tlef-backend'
+    static_configs:
+      - targets: ['backend:8051']
+    metrics_path: '/health' # Update to /metrics if you implement it
+
+  # MongoDB metrics (if mongodb-exporter is deployed)
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: []
+        # - 'mongodb-exporter:9216'
+
+  # Qdrant metrics
+  - job_name: 'qdrant'
+    static_configs:
+      - targets: ['qdrant:6333']
+    metrics_path: '/metrics'

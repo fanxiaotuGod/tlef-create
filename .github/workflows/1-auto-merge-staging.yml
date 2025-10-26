@@ -1,0 +1,36 @@
+name: Auto-Merge Main to Staging
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for all branches
+
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+
+      - name: Merge main into staging
+        run: |
+          git fetch origin staging:staging
+          git checkout staging
+          git merge origin/main -m "Auto-merge main into staging [skip ci]"
+          git push origin staging
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Failed to auto-merge main into staging"
+          echo "Please resolve conflicts manually"

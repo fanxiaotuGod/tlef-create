@@ -1,0 +1,117 @@
+{{- if .Values.backend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tlef-create.backend.fullname" . }}
+  labels:
+    {{- include "tlef-create.labels" . | nindent 4 }}
+    component: backend
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tlef-create.selectorLabels" . | nindent 6 }}
+      component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "tlef-create.selectorLabels" . | nindent 8 }}
+        component: backend
+    spec:
+      serviceAccountName: {{ include "tlef-create.serviceAccountName" . }}
+      containers:
+        - name: backend
+          image: "{{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}"
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.env.port }}
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.backend.env.nodeEnv | quote }}
+            - name: PORT
+              value: {{ .Values.backend.env.port | quote }}
+            - name: MONGODB_URI
+              value: "mongodb://{{ .Values.mongodb.auth.username }}:$(MONGODB_PASSWORD)@{{ include "tlef-create.mongodb.fullname" . }}:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}"
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: mongodb-password
+            - name: QDRANT_URL
+              value: "http://{{ include "tlef-create.qdrant.fullname" . }}:{{ .Values.qdrant.service.httpPort }}"
+            - name: QDRANT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: qdrant-api-key
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: session-secret
+            - name: LLM_PROVIDER
+              value: {{ .Values.backend.env.llmProvider | quote }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: openai-api-key
+            - name: OPENAI_MODEL
+              value: {{ .Values.backend.env.openaiModel | quote }}
+            - name: MAX_FILE_SIZE
+              value: {{ .Values.backend.env.maxFileSize | quote }}
+            - name: UPLOAD_DIR
+              value: {{ .Values.backend.env.uploadDir | quote }}
+            - name: FRONTEND_URL
+              value: {{ .Values.global.domain | default "http://localhost" | quote }}
+            - name: SAML_ENTRY_POINT
+              value: "http://{{ include "tlef-create.saml.fullname" . }}:{{ .Values.saml.service.port }}/simplesaml/saml2/idp/SSOService.php"
+            - name: SAML_LOGOUT_URL
+              value: "http://{{ include "tlef-create.saml.fullname" . }}:{{ .Values.saml.service.port }}/simplesaml/saml2/idp/SingleLogoutService.php"
+            - name: SAML_ISSUER
+              value: {{ .Values.saml.entityId | quote }}
+            - name: SAML_CALLBACK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: saml-callback-url
+            - name: SAML_LOGOUT_CALLBACK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "tlef-create.fullname" . }}-secrets
+                  key: saml-logout-callback-url
+          {{- if .Values.backend.persistence.enabled }}
+          volumeMounts:
+            - name: uploads
+              mountPath: {{ .Values.backend.persistence.mountPath }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      {{- if .Values.backend.persistence.enabled }}
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "tlef-create.backend.fullname" . }}-pvc
+      {{- end }}
+      restartPolicy: Always
+{{- end }}

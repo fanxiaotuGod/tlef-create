@@ -1,0 +1,19 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "tlef-create.frontend.fullname" . }}
+  labels:
+    {{- include "tlef-create.labels" . | nindent 4 }}
+    component: frontend
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "tlef-create.selectorLabels" . | nindent 4 }}
+    component: frontend
+{{- end }}

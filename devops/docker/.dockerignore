@@ -1,0 +1,57 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build artifacts
+dist
+build
+.next
+
+# Development files
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+README.md
+CHANGELOG.md
+
+# Test files
+__tests__
+*.test.js
+*.spec.js
+coverage
+
+# DevOps files (we're already in devops/)
+devops/terraform
+devops/ansible
+devops/k8s
+devops/scripts
+devops/docs
+
+# Logs
+logs
+*.log
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Uploads (will be handled by volumes)
+routes/create/uploads/*

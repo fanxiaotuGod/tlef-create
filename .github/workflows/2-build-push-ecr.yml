@@ -1,0 +1,86 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches:
+      - staging
+    paths-ignore:
+      - '**.md'
+      - 'devops/docs/**'
+
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract metadata
+        id: meta
+        run: |
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./devops/docker/Dockerfile.frontend
+          push: true
+          tags: |
+            ${{ secrets.ECR_FRONTEND_REPOSITORY }}:staging-${{ steps.meta.outputs.sha_short }}
+            ${{ secrets.ECR_FRONTEND_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./devops/docker/Dockerfile.backend
+          push: true
+          tags: |
+            ${{ secrets.ECR_BACKEND_REPOSITORY }}:staging-${{ steps.meta.outputs.sha_short }}
+            ${{ secrets.ECR_BACKEND_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update Helm values with new image tags
+        run: |
+          # Update values.yaml with new image tags
+          sed -i "s|repository: \".*\"|repository: \"${{ secrets.ECR_FRONTEND_REPOSITORY }}\"|" devops/k8s/helm/tlef-create/values.yaml
+          sed -i "s|tag: \".*\"|tag: \"staging-${{ steps.meta.outputs.sha_short }}\"|" devops/k8s/helm/tlef-create/values.yaml
+
+      - name: Commit and push updated values
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git add devops/k8s/helm/tlef-create/values.yaml
+          git commit -m "Update image tags to staging-${{ steps.meta.outputs.sha_short }} [skip ci]" || echo "No changes to commit"
+          git push origin staging || echo "Nothing to push"
+
+      - name: Output image information
+        run: |
+          echo "✅ Images built and pushed successfully!"
+          echo "Frontend: ${{ secrets.ECR_FRONTEND_REPOSITORY }}:staging-${{ steps.meta.outputs.sha_short }}"
+          echo "Backend: ${{ secrets.ECR_BACKEND_REPOSITORY }}:staging-${{ steps.meta.outputs.sha_short }}"
