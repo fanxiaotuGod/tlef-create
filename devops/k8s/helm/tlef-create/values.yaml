@@ -12,7 +12,7 @@ frontend:
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend"
-    tag: "staging-7a2a8d4" # Will be updated by CI/CD with git SHA
+    tag: "staging-c1f5e62" # Will be updated by CI/CD with git SHA
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -36,7 +36,7 @@ backend:
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-backend"
-    tag: "staging-7a2a8d4" # Testing with latest tag to isolate image pull issues
+    tag: "staging-c1f5e62" # Testing with latest tag to isolate image pull issues
     pullPolicy: Always
   service:
     type: ClusterIP
