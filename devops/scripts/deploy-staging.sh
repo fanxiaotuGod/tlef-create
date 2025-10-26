@@ -53,9 +53,13 @@ fi
 # Use optimized terraform execution
 echo -e "${YELLOW}💡 Using optimized Terraform (parallelism=20)${NC}"
 
-# Initialize with plugin caching
+# Initialize with plugin caching and increased timeout
 export TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache
+export TF_PLUGIN_TIMEOUT=120
 mkdir -p $TF_PLUGIN_CACHE_DIR
+
+echo -e "${YELLOW}⏰ Plugin timeout set to 120 seconds${NC}"
+echo -e "${YELLOW}📦 First-time init may take 2-3 minutes to download AWS provider...${NC}"
 terraform init -upgrade
 
 # Run plan with parallelism

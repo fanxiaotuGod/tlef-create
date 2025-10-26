@@ -19,7 +19,9 @@ help: ## Show this help message
 
 init: ## Initialize Terraform (with caching)
 	@echo "$(GREEN)Initializing Terraform...$(NC)"
+	@echo "$(YELLOW)⏰ Setting plugin timeout to 120 seconds...$(NC)"
 	@export TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache && \
+	export TF_PLUGIN_TIMEOUT=120 && \
 	terraform init -upgrade
 
 plan: ## Run Terraform plan (fast with parallelism)

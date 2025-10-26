@@ -50,6 +50,12 @@ if [ ! -d ".terraform" ]; then
     echo -e "${YELLOW}Initializing Terraform...${NC}"
     export TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache
     mkdir -p $TF_PLUGIN_CACHE_DIR
+
+    # Set generous timeout for plugin loading (fixes timeout issues)
+    export TF_PLUGIN_TIMEOUT=120
+
+    echo -e "${YELLOW}⏰ Plugin timeout set to 120 seconds${NC}"
+    echo -e "${YELLOW}📦 Downloading AWS provider (~400MB, may take 2-3 minutes)...${NC}"
     terraform init -upgrade
     echo ""
 fi
@@ -59,6 +65,12 @@ case $COMMAND in
         echo -e "${GREEN}Initializing Terraform with plugin cache...${NC}"
         export TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache
         mkdir -p $TF_PLUGIN_CACHE_DIR
+
+        # Set generous timeout for plugin loading
+        export TF_PLUGIN_TIMEOUT=120
+
+        echo -e "${YELLOW}⏰ Plugin timeout: 120 seconds${NC}"
+        echo -e "${YELLOW}📦 Downloading providers (may take 2-3 minutes on first run)...${NC}"
         terraform init -upgrade
         ;;
 
