@@ -12,7 +12,7 @@ frontend:
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend"
-    tag: "staging-6145bfe" # Will be updated by CI/CD with git SHA
+    tag: "staging-0f83d3c" # Will be updated by CI/CD with git SHA
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -36,7 +36,7 @@ backend:
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-backend"
-    tag: "latest" # Will be updated by CI/CD with git SHA
+    tag: "staging-0f83d3c" # Will be updated by CI/CD with git SHA
     pullPolicy: Always
   service:
     type: ClusterIP
@@ -180,7 +180,7 @@ monitoring:
     enabled: true
     image:
       repository: prom/prometheus
-      tag: "v2.45.0"
+      tag: "staging-0f83d3c"
       pullPolicy: IfNotPresent
     service:
       type: ClusterIP
@@ -199,7 +199,7 @@ monitoring:
     enabled: true
     image:
       repository: grafana/grafana
-      tag: "10.1.0"
+      tag: "staging-0f83d3c"
       pullPolicy: IfNotPresent
     service:
       type: NodePort # Expose for external access
