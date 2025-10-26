@@ -94,6 +94,33 @@ jobs:
           git commit -m "Update image tags to staging-$SHORT_SHA [skip ci]" || echo "No changes to commit"
           git push origin staging || echo "Nothing to push"
 
+      - name: Update Kubernetes secrets
+        run: |
+          echo "Updating Kubernetes secrets with OpenAI API key..."
+          cat <<EOF > /tmp/secrets.yaml
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: tlef-create-secrets
+            namespace: tlef-staging
+          type: Opaque
+          stringData:
+            openai-api-key: "${{ secrets.OPENAI_API_KEY }}"
+            mongodb-password: "changeme-mongodb-password"
+            qdrant-api-key: "changeme-qdrant-key"
+            session-secret: "changeme-session-secret"
+            saml-callback-url: "http://44.254.85.218/api/create/auth/saml/callback"
+            saml-logout-callback-url: "http://44.254.85.218/api/create/auth/logout/callback"
+          EOF
+
+          # Save to repository so ArgoCD can sync it
+          mkdir -p devops/k8s/secrets
+          mv /tmp/secrets.yaml devops/k8s/secrets/tlef-create-secrets.yaml
+
+          git add devops/k8s/secrets/tlef-create-secrets.yaml
+          git commit -m "Update secrets with OpenAI API key [skip ci]" || echo "No secrets changes"
+          git push origin staging || echo "Nothing to push"
+
       - name: Output image information
         run: |
           echo "✅ Images built and pushed successfully!"
