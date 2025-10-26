@@ -231,3 +231,7 @@ serviceAccount:
   create: true
   annotations: {}
   name: "tlef-create-sa"
+
+# Automatic Cleanup
+cleanup:
+  enabled: true  # Enable automatic cleanup of failed pods and old ReplicaSets

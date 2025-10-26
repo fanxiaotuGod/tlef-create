@@ -10,6 +10,7 @@ spec:
   {{- if not .Values.frontend.autoscaling.enabled }}
   replicas: {{ .Values.frontend.replicaCount }}
   {{- end }}
+  revisionHistoryLimit: 2  # Keep only 2 old ReplicaSets
   selector:
     matchLabels:
       {{- include "tlef-create.selectorLabels" . | nindent 6 }}

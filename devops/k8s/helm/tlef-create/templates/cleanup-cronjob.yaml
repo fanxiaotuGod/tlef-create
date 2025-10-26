@@ -1,0 +1,44 @@
+{{- if .Values.cleanup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "tlef-create.fullname" . }}-cleanup
+  labels:
+    {{- include "tlef-create.labels" . | nindent 4 }}
+    component: cleanup
+spec:
+  schedule: "0 2 * * *"  # Run daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: {{ include "tlef-create.serviceAccountName" . }}
+          containers:
+          - name: cleanup
+            image: bitnami/kubectl:latest
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting cleanup of failed/evicted pods..."
+              
+              # Delete failed pods
+              kubectl delete pods --field-selector=status.phase=Failed -n {{ .Release.Namespace }} --ignore-not-found=true
+              
+              # Delete evicted pods  
+              kubectl delete pods --field-selector=status.phase=Succeeded -n {{ .Release.Namespace }} --ignore-not-found=true
+              
+              # Delete old ReplicaSets (keep only 2 most recent per deployment)
+              for deployment in $(kubectl get deployments -n {{ .Release.Namespace }} -o name); do
+                echo "Cleaning old ReplicaSets for $deployment"
+                kubectl get rs -n {{ .Release.Namespace }} --sort-by=.metadata.creationTimestamp | \
+                grep $(echo $deployment | cut -d'/' -f2) | \
+                head -n -2 | \
+                awk '{print $1}' | \
+                xargs -r kubectl delete rs -n {{ .Release.Namespace }}
+              done
+              
+              echo "Cleanup completed!"
+          restartPolicy: OnFailure
+{{- end }}

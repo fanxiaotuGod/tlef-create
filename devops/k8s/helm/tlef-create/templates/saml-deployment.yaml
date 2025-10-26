@@ -8,6 +8,7 @@ metadata:
     component: saml
 spec:
   replicas: 1
+  revisionHistoryLimit: 2  # Keep only 2 old ReplicaSets
   selector:
     matchLabels:
       {{- include "tlef-create.selectorLabels" . | nindent 6 }}
