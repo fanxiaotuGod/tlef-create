@@ -9,10 +9,11 @@
 
   pre_tasks:
     - name: Verify K3s is running
-      command: kubectl get nodes
+      shell: KUBECONFIG=/home/ubuntu/.kube/config kubectl get nodes
       register: k3s_status
       changed_when: false
       failed_when: k3s_status.rc != 0
+      become_user: ubuntu
 
     - name: Display K3s status
       debug:

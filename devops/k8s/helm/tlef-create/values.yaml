@@ -169,7 +169,7 @@ secrets:
     apiKey: "" # Set via kubectl create secret or CI/CD
   backend:
     sessionSecret: "" # Set via kubectl create secret or CI/CD
-    openaiApiKey: "" # Set via kubectl create secret or CI/CD
+    openaiApiKey: "sk-placeholder-key-change-me" # Set via kubectl create secret or CI/CD
     samlCallbackUrl: ""
     samlLogoutCallbackUrl: ""
 

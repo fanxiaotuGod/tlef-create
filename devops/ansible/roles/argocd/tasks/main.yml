@@ -2,18 +2,20 @@
 # ArgoCD Installation and Configuration Tasks
 
 - name: Create argocd namespace
-  shell: kubectl create namespace {{ argocd_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+  shell: KUBECONFIG=/home/ubuntu/.kube/config kubectl create namespace {{ argocd_namespace }} --dry-run=client -o yaml | KUBECONFIG=/home/ubuntu/.kube/config kubectl apply -f -
   changed_when: false
+  become_user: ubuntu
 
 - name: Install ArgoCD
   shell: |
-    kubectl apply -n {{ argocd_namespace }} -f https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml
+    KUBECONFIG=/home/ubuntu/.kube/config kubectl apply -n {{ argocd_namespace }} -f https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml
   register: argocd_install
   changed_when: "'created' in argocd_install.stdout or 'configured' in argocd_install.stdout"
+  become_user: ubuntu
 
 - name: Wait for ArgoCD deployments to be ready
   shell: |
-    kubectl wait --for=condition=available --timeout=300s \
+    KUBECONFIG=/home/ubuntu/.kube/config kubectl wait --for=condition=available --timeout=300s \
       deployment/argocd-server \
       deployment/argocd-repo-server \
       deployment/argocd-applicationset-controller \
@@ -22,27 +24,28 @@
       deployment/argocd-redis \
       -n {{ argocd_namespace }}
   register: argocd_ready
-  retries: 3
-  delay: 30
-  until: argocd_ready.rc == 0
   changed_when: false
+  become_user: ubuntu
 
 - name: Patch ArgoCD server service to NodePort
   shell: |
-    kubectl patch svc argocd-server -n {{ argocd_namespace }} -p '{"spec": {"type": "NodePort"}}'
+    KUBECONFIG=/home/ubuntu/.kube/config kubectl patch svc argocd-server -n {{ argocd_namespace }} -p '{"spec": {"type": "NodePort"}}'
   register: argocd_patch
   changed_when: "'patched' in argocd_patch.stdout"
+  become_user: ubuntu
 
 - name: Get ArgoCD server NodePort
-  shell: kubectl get svc argocd-server -n {{ argocd_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
+  shell: KUBECONFIG=/home/ubuntu/.kube/config kubectl get svc argocd-server -n {{ argocd_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
   register: argocd_nodeport
   changed_when: false
+  become_user: ubuntu
 
 - name: Get ArgoCD initial admin password
-  shell: kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+  shell: KUBECONFIG=/home/ubuntu/.kube/config kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
   register: argocd_password
   changed_when: false
   no_log: false
+  become_user: ubuntu
 
 - name: Save ArgoCD credentials to file
   copy:
@@ -70,10 +73,11 @@
 
 - name: Apply ArgoCD application manifest
   shell: |
-    kubectl apply -f /home/ubuntu/tlef-create/devops/k8s/argocd/application.yaml
+    KUBECONFIG=/home/ubuntu/.kube/config kubectl apply -f /home/ubuntu/tlef-create/devops/k8s/argocd/application.yaml
   register: app_apply
   changed_when: "'created' in app_apply.stdout or 'configured' in app_apply.stdout"
   ignore_errors: yes
+  become_user: ubuntu
 
 - name: Display ArgoCD access information
   debug:

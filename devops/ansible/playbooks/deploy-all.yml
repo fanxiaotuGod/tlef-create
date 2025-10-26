@@ -36,14 +36,16 @@
   tasks:
     - name: Wait for all pods to be ready
       shell: |
-        kubectl wait --for=condition=ready pod --all -n {{ app_namespace }} --timeout=300s || true
+        KUBECONFIG=/home/ubuntu/.kube/config kubectl wait --for=condition=ready pod --all -n {{ app_namespace }} --timeout=300s || true
       register: pods_ready
       changed_when: false
+      become_user: ubuntu
 
     - name: Get all resources
-      shell: kubectl get all -n {{ app_namespace }}
+      shell: KUBECONFIG=/home/ubuntu/.kube/config kubectl get all -n {{ app_namespace }}
       register: all_resources
       changed_when: false
+      become_user: ubuntu
 
     - name: Display final deployment status
       debug:
