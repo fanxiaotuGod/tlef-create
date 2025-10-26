@@ -37,6 +37,7 @@ backend:
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-backend"
     tag: "latest" # Will be updated by CI/CD with git SHA
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8051
@@ -71,7 +72,7 @@ mongodb:
   enabled: true
   image:
     repository: mongo
-    tag: "staging-6145bfe"
+    tag: "7.0"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -98,7 +99,7 @@ qdrant:
   enabled: true
   image:
     repository: qdrant/qdrant
-    tag: "staging-6145bfe"
+    tag: "v1.14.1"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -123,7 +124,7 @@ saml:
   enabled: true
   image:
     repository: kenchan0130/simplesamlphp
-    tag: "staging-6145bfe"
+    tag: "2.2.2"
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -179,7 +180,7 @@ monitoring:
     enabled: true
     image:
       repository: prom/prometheus
-      tag: "staging-6145bfe"
+      tag: "v2.45.0"
       pullPolicy: IfNotPresent
     service:
       type: ClusterIP
@@ -198,7 +199,7 @@ monitoring:
     enabled: true
     image:
       repository: grafana/grafana
-      tag: "staging-6145bfe"
+      tag: "10.1.0"
       pullPolicy: IfNotPresent
     service:
       type: NodePort # Expose for external access
