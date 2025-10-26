@@ -36,7 +36,7 @@ backend:
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-backend"
-    tag: "staging-b6bf7b9" # Will be updated by CI/CD with git SHA
+    tag: "latest" # Testing with latest tag to isolate image pull issues
     pullPolicy: Always
   service:
     type: ClusterIP

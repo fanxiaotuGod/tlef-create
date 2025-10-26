@@ -37,7 +37,7 @@ variable "availability_zone" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t2.micro" # Free tier eligible
+  default     = "t3.medium" # Free tier eligible
 }
 
 variable "ami_id" {
