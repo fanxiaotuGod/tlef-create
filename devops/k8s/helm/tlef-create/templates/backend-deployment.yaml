@@ -102,17 +102,17 @@ spec:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60  # Give more time for AI services to initialize
             periodSeconds: 30
-            timeoutSeconds: 10
+            timeoutSeconds: 15  # Allow more time for health check response
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 45  # Wait longer before first readiness check
             periodSeconds: 10
-            timeoutSeconds: 5
+            timeoutSeconds: 10  # Allow more time for health check response
             failureThreshold: 3
           resources:
             {{- toYaml .Values.backend.resources | nindent 12 }}
