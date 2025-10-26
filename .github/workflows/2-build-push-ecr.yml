@@ -70,19 +70,19 @@ jobs:
           # Get the short SHA
           SHORT_SHA=$(git rev-parse --short HEAD)
           
-          # Update frontend repository and tag (lines 13-16 approximately)
+          # Update frontend image tag only (more specific targeting)
           sed -i '/# Frontend configuration/,/# Backend configuration/ {
-            /repository:/ s|repository: ".*"|repository: "${{ secrets.ECR_FRONTEND_REPOSITORY }}"|
-            /tag:/ s|tag: ".*"|tag: "staging-'$SHORT_SHA'"|
+            /repository:.*ecr.*tlef-create-frontend/ s|repository: ".*"|repository: "${{ secrets.ECR_FRONTEND_REPOSITORY }}"|
+            /repository:.*ecr.*tlef-create-frontend/,+1 { /tag:/ s|tag: ".*"|tag: "staging-'$SHORT_SHA'"|; }
           }' devops/k8s/helm/tlef-create/values.yaml
           
-          # Update backend repository and tag (lines 33-36 approximately)  
+          # Update backend image tag only (more specific targeting)  
           sed -i '/# Backend configuration/,/env:/ {
-            /repository:/ s|repository: ".*"|repository: "${{ secrets.ECR_BACKEND_REPOSITORY }}"|
-            /tag:/ s|tag: ".*"|tag: "staging-'$SHORT_SHA'"|
+            /repository:.*ecr.*tlef-create-backend/ s|repository: ".*"|repository: "${{ secrets.ECR_BACKEND_REPOSITORY }}"|
+            /repository:.*ecr.*tlef-create-backend/,+1 { /tag:/ s|tag: ".*"|tag: "staging-'$SHORT_SHA'"|; }
           }' devops/k8s/helm/tlef-create/values.yaml
           
-          echo "Updated tags to staging-$SHORT_SHA"
+          echo "Updated ECR image tags to staging-$SHORT_SHA"
           cat devops/k8s/helm/tlef-create/values.yaml | grep -A 3 "repository:"
 
       - name: Commit and push updated values

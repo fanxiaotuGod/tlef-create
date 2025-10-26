@@ -180,7 +180,7 @@ monitoring:
     enabled: true
     image:
       repository: prom/prometheus
-      tag: "staging-0f83d3c"
+      tag: "v2.45.0"
       pullPolicy: IfNotPresent
     service:
       type: ClusterIP
@@ -199,7 +199,7 @@ monitoring:
     enabled: true
     image:
       repository: grafana/grafana
-      tag: "staging-0f83d3c"
+      tag: "10.1.0"
       pullPolicy: IfNotPresent
     service:
       type: NodePort # Expose for external access
