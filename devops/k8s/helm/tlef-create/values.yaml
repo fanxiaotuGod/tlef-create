@@ -82,17 +82,17 @@ mongodb:
     password: "" # Set via secrets
     database: tlef-create
   persistence:
-    enabled: true
+    enabled: false  # Temporarily disabled to reduce I/O overhead
     storageClass: "" # Use default storage class
     accessMode: ReadWriteOnce
-    size: 10Gi
+    size: 5Gi  # Reduced from 10Gi
   resources:
     requests:
-      memory: "256Mi"
-      cpu: "200m"
+      memory: "128Mi"  # Reduced from 256Mi
+      cpu: "100m"      # Reduced from 200m
     limits:
-      memory: "512Mi"
-      cpu: "500m"
+      memory: "256Mi"  # Reduced from 512Mi
+      cpu: "250m"      # Reduced from 500m
 
 # Qdrant configuration
 qdrant:
@@ -107,17 +107,17 @@ qdrant:
     grpcPort: 6334
   apiKey: "" # Set via secrets
   persistence:
-    enabled: true
+    enabled: false  # Temporarily disabled to reduce I/O overhead
     storageClass: "" # Use default storage class
     accessMode: ReadWriteOnce
-    size: 10Gi
+    size: 5Gi  # Reduced from 10Gi
   resources:
     requests:
-      memory: "256Mi"
-      cpu: "200m"
+      memory: "128Mi"  # Reduced from 256Mi
+      cpu: "100m"      # Reduced from 200m
     limits:
-      memory: "512Mi"
-      cpu: "500m"
+      memory: "256Mi"  # Reduced from 512Mi
+      cpu: "250m"      # Reduced from 500m
 
 # SAML configuration
 saml:
