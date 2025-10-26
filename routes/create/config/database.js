@@ -5,8 +5,23 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    // Support both MONGODB_URI and MONGO_URI for compatibility
-    const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://tlef-app:tlef-app-2024@localhost:27017/tlef-create';
+    // Support both MONGODB_URI (full URI) and separate components for Kubernetes
+    let mongoUri;
+
+    if (process.env.MONGODB_URI || process.env.MONGO_URI) {
+      mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    } else if (process.env.MONGODB_HOST) {
+      // Construct URI from separate environment variables (Kubernetes pattern)
+      const host = process.env.MONGODB_HOST || 'localhost';
+      const port = process.env.MONGODB_PORT || '27017';
+      const username = process.env.MONGODB_USERNAME || 'tlef-app';
+      const password = process.env.MONGODB_PASSWORD || 'tlef-app-2024';
+      const database = process.env.MONGODB_DATABASE || 'tlef-create';
+      mongoUri = `mongodb://${username}:${password}@${host}:${port}/${database}`;
+    } else {
+      // Default for local development
+      mongoUri = 'mongodb://tlef-app:tlef-app-2024@localhost:27017/tlef-create';
+    }
     const conn = await mongoose.connect(mongoUri, {
       // Mongoose 7+ doesn't need most options as they're defaults
       serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds

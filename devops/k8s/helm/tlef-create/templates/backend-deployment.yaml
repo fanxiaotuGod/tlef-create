@@ -35,8 +35,14 @@ spec:
               value: {{ .Values.backend.env.nodeEnv | quote }}
             - name: PORT
               value: {{ .Values.backend.env.port | quote }}
-            - name: MONGODB_URI
-              value: "mongodb://{{ .Values.mongodb.auth.username }}:$(MONGODB_PASSWORD)@{{ include "tlef-create.mongodb.fullname" . }}:{{ .Values.mongodb.service.port }}/{{ .Values.mongodb.auth.database }}"
+            - name: MONGODB_HOST
+              value: "{{ include "tlef-create.mongodb.fullname" . }}"
+            - name: MONGODB_PORT
+              value: "{{ .Values.mongodb.service.port }}"
+            - name: MONGODB_DATABASE
+              value: "{{ .Values.mongodb.auth.database }}"
+            - name: MONGODB_USERNAME
+              value: "{{ .Values.mongodb.auth.username }}"
             - name: MONGODB_PASSWORD
               valueFrom:
                 secretKeyRef:
