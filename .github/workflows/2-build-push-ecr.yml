@@ -67,24 +67,31 @@ jobs:
 
       - name: Update Helm values with new image tags
         run: |
-          # Update frontend image tag
-          sed -i '/frontend:/,/backend:/{
+          # Get the short SHA
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          
+          # Update frontend repository and tag (lines 13-16 approximately)
+          sed -i '/# Frontend configuration/,/# Backend configuration/ {
             /repository:/ s|repository: ".*"|repository: "${{ secrets.ECR_FRONTEND_REPOSITORY }}"|
-            /tag:/ s|tag: ".*"|tag: "staging-${{ steps.meta.outputs.sha_short }}"|
+            /tag:/ s|tag: ".*"|tag: "staging-'$SHORT_SHA'"|
           }' devops/k8s/helm/tlef-create/values.yaml
           
-          # Update backend image tag  
-          sed -i '/backend:/,/env:/{
+          # Update backend repository and tag (lines 33-36 approximately)  
+          sed -i '/# Backend configuration/,/env:/ {
             /repository:/ s|repository: ".*"|repository: "${{ secrets.ECR_BACKEND_REPOSITORY }}"|
-            /tag:/ s|tag: ".*"|tag: "staging-${{ steps.meta.outputs.sha_short }}"|
+            /tag:/ s|tag: ".*"|tag: "staging-'$SHORT_SHA'"|
           }' devops/k8s/helm/tlef-create/values.yaml
+          
+          echo "Updated tags to staging-$SHORT_SHA"
+          cat devops/k8s/helm/tlef-create/values.yaml | grep -A 3 "repository:"
 
       - name: Commit and push updated values
         run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
           git add devops/k8s/helm/tlef-create/values.yaml
-          git commit -m "Update image tags to staging-${{ steps.meta.outputs.sha_short }} [skip ci]" || echo "No changes to commit"
+          git commit -m "Update image tags to staging-$SHORT_SHA [skip ci]" || echo "No changes to commit"
           git push origin staging || echo "Nothing to push"
 
       - name: Output image information
