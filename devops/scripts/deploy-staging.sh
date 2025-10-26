@@ -50,12 +50,26 @@ if [ ! -f "terraform.tfvars" ]; then
     exit 1
 fi
 
-terraform init
-terraform plan -out=tfplan
+# Use optimized terraform execution
+echo -e "${YELLOW}💡 Using optimized Terraform (parallelism=20)${NC}"
+
+# Initialize with plugin caching
+export TF_PLUGIN_CACHE_DIR=~/.terraform.d/plugin-cache
+mkdir -p $TF_PLUGIN_CACHE_DIR
+terraform init -upgrade
+
+# Run plan with parallelism
+echo ""
+echo "Running Terraform plan with optimizations..."
+TF_LOG=INFO terraform plan -parallelism=20 -out=tfplan
+
+echo ""
 read -p "Do you want to apply this Terraform plan? (yes/no): " apply_tf
 
 if [ "$apply_tf" = "yes" ]; then
-    terraform apply tfplan
+    echo ""
+    echo "Applying Terraform changes (this will be much faster!)..."
+    TF_LOG=INFO terraform apply -parallelism=20 tfplan
     terraform output > ../../TERRAFORM_OUTPUTS.txt
     echo -e "${GREEN}✅ Infrastructure deployed${NC}"
 else

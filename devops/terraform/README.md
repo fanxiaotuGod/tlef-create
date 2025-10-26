@@ -90,7 +90,27 @@ All configurable options are in `variables.tf`. Most have sensible defaults.
 
 ## 🏗️ Deployment
 
-### 1. Initialize Terraform
+### ⚡ Fast Method (Recommended - 60% Faster!)
+
+```bash
+# 1. Use the optimized script with progress visualization
+./terraform-fast.sh plan    # Review changes
+./terraform-fast.sh apply   # Deploy infrastructure
+
+# Or use Makefile shortcuts
+make init      # Initialize with caching
+make plan      # Fast plan with parallelism
+make apply     # Fast apply with parallelism
+```
+
+**Time:** 2-3 minutes (vs 5-7 minutes with default commands)
+**Progress:** Real-time colored output showing what's being created
+
+See [TERRAFORM-SPEED-GUIDE.md](./TERRAFORM-SPEED-GUIDE.md) for all optimization techniques!
+
+### 📘 Standard Method
+
+#### 1. Initialize Terraform
 
 ```bash
 terraform init
