@@ -42,7 +42,7 @@ backend:
     type: ClusterIP
     port: 8051
   env:
-    nodeEnv: "production"
+    nodeEnv: "development"  # Changed from production for faster startup
     port: "8051"
     llmProvider: "openai"
     openaiModel: "gpt-4o-mini"
@@ -50,11 +50,11 @@ backend:
     uploadDir: "/app/routes/create/uploads"
   resources:
     requests:
-      memory: "512Mi"
-      cpu: "250m"
+      memory: "1Gi"      # Doubled from 512Mi
+      cpu: "500m"        # Doubled from 250m  
     limits:
-      memory: "1Gi"
-      cpu: "500m"
+      memory: "2Gi"      # Doubled from 1Gi
+      cpu: "1000m"       # Doubled from 500m (1 full core)
   autoscaling:
     enabled: false
     minReplicas: 1
