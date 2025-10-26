@@ -141,10 +141,10 @@ saml:
 # Ingress configuration
 ingress:
   enabled: true
-  className: "nginx" # K3s includes Traefik by default, but we'll use nginx
+  className: "traefik" # K3s includes Traefik by default
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-staging" # For SSL/TLS
-    nginx.ingress.kubernetes.io/ssl-redirect: "false" # Set to "true" when SSL is configured
+    traefik.ingress.kubernetes.io/router.entrypoints: "web" # HTTP entrypoint
   hosts:
     - host: "" # Leave empty for IP-based access, or set to your domain
       paths:
