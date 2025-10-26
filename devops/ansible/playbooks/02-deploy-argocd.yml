@@ -1,0 +1,33 @@
+---
+# Deploy ArgoCD for GitOps
+# This playbook installs and configures ArgoCD on the K3s cluster
+
+- name: Deploy ArgoCD
+  hosts: staging
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Verify K3s is running
+      command: kubectl get nodes
+      register: k3s_status
+      changed_when: false
+      failed_when: k3s_status.rc != 0
+
+    - name: Display K3s status
+      debug:
+        msg: "{{ k3s_status.stdout_lines }}"
+
+  roles:
+    - role: argocd
+      tags: ['argocd', 'gitops']
+
+  post_tasks:
+    - name: Display ArgoCD access information
+      debug:
+        msg:
+          - "✅ ArgoCD deployed successfully!"
+          - "Access ArgoCD UI:"
+          - "  URL: https://{{ ansible_host }}:{{ argocd_nodeport | default('Check with kubectl') }}"
+          - "  Username: admin"
+          - "  Password: Run 'kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath={.data.password} | base64 -d'"

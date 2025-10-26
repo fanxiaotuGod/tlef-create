@@ -1,0 +1,93 @@
+---
+# ArgoCD Installation and Configuration Tasks
+
+- name: Create argocd namespace
+  shell: kubectl create namespace {{ argocd_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Install ArgoCD
+  shell: |
+    kubectl apply -n {{ argocd_namespace }} -f https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml
+  register: argocd_install
+  changed_when: "'created' in argocd_install.stdout or 'configured' in argocd_install.stdout"
+
+- name: Wait for ArgoCD deployments to be ready
+  shell: |
+    kubectl wait --for=condition=available --timeout=300s \
+      deployment/argocd-server \
+      deployment/argocd-repo-server \
+      deployment/argocd-applicationset-controller \
+      deployment/argocd-dex-server \
+      deployment/argocd-notifications-controller \
+      deployment/argocd-redis \
+      -n {{ argocd_namespace }}
+  register: argocd_ready
+  retries: 3
+  delay: 30
+  until: argocd_ready.rc == 0
+  changed_when: false
+
+- name: Patch ArgoCD server service to NodePort
+  shell: |
+    kubectl patch svc argocd-server -n {{ argocd_namespace }} -p '{"spec": {"type": "NodePort"}}'
+  register: argocd_patch
+  changed_when: "'patched' in argocd_patch.stdout"
+
+- name: Get ArgoCD server NodePort
+  shell: kubectl get svc argocd-server -n {{ argocd_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
+  register: argocd_nodeport
+  changed_when: false
+
+- name: Get ArgoCD initial admin password
+  shell: kubectl -n {{ argocd_namespace }} get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+  register: argocd_password
+  changed_when: false
+  no_log: false
+
+- name: Save ArgoCD credentials to file
+  copy:
+    content: |
+      ArgoCD Access Information
+      =========================
+      URL: https://{{ ansible_host }}:{{ argocd_nodeport.stdout }}
+      Username: admin
+      Password: {{ argocd_password.stdout }}
+
+      ⚠️  IMPORTANT: Change the admin password after first login!
+    dest: /home/ubuntu/argocd-credentials.txt
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+
+- name: Clone application repository (if not exists)
+  git:
+    repo: "{{ git_repo }}"
+    dest: /home/ubuntu/tlef-create
+    version: "{{ git_branch }}"
+    force: no
+  become_user: ubuntu
+  ignore_errors: yes
+
+- name: Apply ArgoCD application manifest
+  shell: |
+    kubectl apply -f /home/ubuntu/tlef-create/devops/k8s/argocd/application.yaml
+  register: app_apply
+  changed_when: "'created' in app_apply.stdout or 'configured' in app_apply.stdout"
+  ignore_errors: yes
+
+- name: Display ArgoCD access information
+  debug:
+    msg:
+      - "✅ ArgoCD installed successfully!"
+      - ""
+      - "Access Information:"
+      - "  URL: https://{{ ansible_host }}:{{ argocd_nodeport.stdout }}"
+      - "  Username: admin"
+      - "  Password: {{ argocd_password.stdout }}"
+      - ""
+      - "⚠️  Credentials saved to: /home/ubuntu/argocd-credentials.txt"
+      - ""
+      - "Next steps:"
+      - "1. Access ArgoCD UI"
+      - "2. Change admin password"
+      - "3. Verify application is syncing"

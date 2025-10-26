@@ -1,0 +1,76 @@
+name: Deploy with Ansible
+
+on:
+  workflow_dispatch:  # Manual trigger
+    inputs:
+      playbook:
+        description: 'Playbook to run'
+        required: true
+        default: 'deploy-all.yml'
+        type: choice
+        options:
+          - deploy-all.yml
+          - 01-initial-setup.yml
+          - 02-deploy-argocd.yml
+          - 03-deploy-monitoring.yml
+
+jobs:
+  ansible-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Install Ansible collections
+        run: |
+          ansible-galaxy collection install kubernetes.core
+          ansible-galaxy collection install community.general
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/tlef-create-staging.pem
+          chmod 400 ~/.ssh/tlef-create-staging.pem
+
+      - name: Update inventory with EC2 host
+        run: |
+          cd devops/ansible
+          # Replace placeholder with actual EC2 host from secrets
+          sed -i "s/REPLACE_WITH_EC2_IP/${{ secrets.EC2_HOST }}/g" inventory/staging.yml
+
+      - name: Run Ansible playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: False
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          ECR_FRONTEND_REPOSITORY: ${{ secrets.ECR_FRONTEND_REPOSITORY }}
+          ECR_BACKEND_REPOSITORY: ${{ secrets.ECR_BACKEND_REPOSITORY }}
+          GRAFANA_PASSWORD: ${{ secrets.GRAFANA_PASSWORD || 'admin' }}
+        run: |
+          cd devops/ansible
+          ansible-playbook -i inventory/staging.yml playbooks/${{ github.event.inputs.playbook }} -v
+
+      - name: Display deployment status
+        if: success()
+        run: |
+          echo "✅ Ansible deployment completed successfully!"
+          echo "Playbook: ${{ github.event.inputs.playbook }}"
+          echo "Target: ${{ secrets.EC2_HOST }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Ansible deployment failed!"
+          echo "Check the logs above for details"

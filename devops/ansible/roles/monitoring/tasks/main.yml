@@ -1,0 +1,118 @@
+---
+# Monitoring Stack Installation Tasks (Prometheus + Grafana)
+
+- name: Create monitoring namespace
+  shell: kubectl create namespace {{ monitoring_namespace }} --dry-run=client -o yaml | kubectl apply -f -
+  changed_when: false
+
+- name: Add Prometheus Helm repository
+  shell: |
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo update
+  changed_when: false
+
+- name: Install Prometheus using Helm
+  shell: |
+    helm upgrade --install prometheus prometheus-community/prometheus \
+      --namespace {{ monitoring_namespace }} \
+      --set server.service.type=NodePort \
+      --set server.service.nodePort={{ prometheus_nodeport }} \
+      --set alertmanager.enabled={{ alertmanager_enabled }} \
+      --set pushgateway.enabled=false
+  register: prometheus_install
+  changed_when: "'has been upgraded' in prometheus_install.stdout or 'has been installed' in prometheus_install.stdout"
+
+- name: Add Grafana Helm repository
+  shell: |
+    helm repo add grafana https://grafana.github.io/helm-charts
+    helm repo update
+  changed_when: false
+
+- name: Install Grafana using Helm
+  shell: |
+    helm upgrade --install grafana grafana/grafana \
+      --namespace {{ monitoring_namespace }} \
+      --set service.type=NodePort \
+      --set service.nodePort={{ grafana_nodeport }} \
+      --set adminPassword={{ grafana_admin_password }} \
+      --set persistence.enabled=true \
+      --set persistence.size={{ grafana_storage_size }}
+  register: grafana_install
+  changed_when: "'has been upgraded' in grafana_install.stdout or 'has been installed' in grafana_install.stdout"
+
+- name: Wait for Prometheus to be ready
+  shell: kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=prometheus -n {{ monitoring_namespace }} --timeout=300s
+  register: prometheus_ready
+  retries: 3
+  delay: 10
+  until: prometheus_ready.rc == 0
+  changed_when: false
+
+- name: Wait for Grafana to be ready
+  shell: kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=grafana -n {{ monitoring_namespace }} --timeout=300s
+  register: grafana_ready
+  retries: 3
+  delay: 10
+  until: grafana_ready.rc == 0
+  changed_when: false
+
+- name: Get Prometheus NodePort
+  shell: kubectl get svc prometheus-server -n {{ monitoring_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
+  register: prometheus_port
+  changed_when: false
+
+- name: Get Grafana NodePort
+  shell: kubectl get svc grafana -n {{ monitoring_namespace }} -o jsonpath='{.spec.ports[0].nodePort}'
+  register: grafana_port
+  changed_when: false
+
+- name: Get Grafana admin password
+  shell: kubectl get secret grafana -n {{ monitoring_namespace }} -o jsonpath="{.data.admin-password}" | base64 -d
+  register: grafana_pwd
+  changed_when: false
+  no_log: false
+
+- name: Save monitoring credentials to file
+  copy:
+    content: |
+      Monitoring Stack Access Information
+      ===================================
+
+      Prometheus:
+      -----------
+      URL: http://{{ ansible_host }}:{{ prometheus_port.stdout }}
+      No authentication required
+
+      Grafana:
+      --------
+      URL: http://{{ ansible_host }}:{{ grafana_port.stdout }}
+      Username: admin
+      Password: {{ grafana_pwd.stdout }}
+
+      Data Source:
+      -----------
+      Prometheus URL (internal): http://prometheus-server.{{ monitoring_namespace }}.svc.cluster.local
+
+      Next steps:
+      1. Access Grafana UI
+      2. Add Prometheus as a data source
+      3. Import dashboards for Kubernetes monitoring
+    dest: /home/ubuntu/monitoring-credentials.txt
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+
+- name: Display monitoring access information
+  debug:
+    msg:
+      - "✅ Monitoring stack installed successfully!"
+      - ""
+      - "Prometheus:"
+      - "  URL: http://{{ ansible_host }}:{{ prometheus_port.stdout }}"
+      - ""
+      - "Grafana:"
+      - "  URL: http://{{ ansible_host }}:{{ grafana_port.stdout }}"
+      - "  Username: admin"
+      - "  Password: {{ grafana_pwd.stdout }}"
+      - ""
+      - "⚠️  Credentials saved to: /home/ubuntu/monitoring-credentials.txt"

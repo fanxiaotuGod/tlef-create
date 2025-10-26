@@ -1,0 +1,19 @@
+---
+# Default variables for Monitoring role
+
+monitoring_namespace: monitoring
+
+# Prometheus configuration
+prometheus_enabled: true
+prometheus_nodeport: 30090
+prometheus_retention: 15d
+alertmanager_enabled: false
+
+# Grafana configuration
+grafana_enabled: true
+grafana_nodeport: 30300
+grafana_admin_password: admin
+grafana_storage_size: 5Gi
+
+# Node Exporter (for system metrics)
+node_exporter_enabled: true

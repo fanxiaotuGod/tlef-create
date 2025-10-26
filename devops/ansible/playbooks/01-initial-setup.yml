@@ -1,0 +1,38 @@
+---
+# Initial EC2 Server Setup
+# This playbook prepares the EC2 instance with all required dependencies
+
+- name: Initial EC2 Server Setup
+  hosts: staging
+  become: yes
+  gather_facts: yes
+
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install basic dependencies
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - unzip
+          - jq
+          - ca-certificates
+          - gnupg
+          - lsb-release
+          - python3-pip
+          - apt-transport-https
+        state: present
+
+  roles:
+    - role: k3s
+      tags: ['k3s']
+
+  post_tasks:
+    - name: Display completion message
+      debug:
+        msg: "✅ Initial setup completed successfully!"

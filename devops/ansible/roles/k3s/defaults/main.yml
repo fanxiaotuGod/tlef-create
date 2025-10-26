@@ -1,0 +1,15 @@
+---
+# Default variables for K3s role
+
+k3s_version: stable
+k3s_install_dir: /usr/local/bin
+k3s_config_dir: /etc/rancher/k3s
+k3s_data_dir: /var/lib/rancher/k3s
+
+# K3s configuration
+k3s_server_options:
+  - "--write-kubeconfig-mode=644"
+  - "--disable=traefik"  # We'll use nginx-ingress instead
+
+# kubeconfig location
+kubeconfig_path: /home/ubuntu/.kube/config

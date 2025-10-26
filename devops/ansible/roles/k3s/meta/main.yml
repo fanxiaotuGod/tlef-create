@@ -1,0 +1,15 @@
+---
+# K3s role metadata
+
+galaxy_info:
+  author: TLEF DevOps Team
+  description: Install and configure K3s Kubernetes cluster
+  license: MIT
+  min_ansible_version: 2.9
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+
+dependencies: []

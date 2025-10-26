@@ -1,0 +1,14 @@
+---
+# Default variables for ArgoCD role
+
+argocd_version: stable
+argocd_namespace: argocd
+argocd_admin_password: ""  # Leave empty to keep auto-generated password
+
+# Application configuration
+git_repo: https://github.com/fanxiaotuGod/tlef-create.git
+git_branch: staging
+app_namespace: tlef-staging
+
+# ArgoCD server configuration
+argocd_service_type: NodePort

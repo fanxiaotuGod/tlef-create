@@ -1,0 +1,47 @@
+---
+# Ansible Inventory for TLEF-CREATE Staging Environment
+# This file defines the staging server and its configuration
+
+all:
+  children:
+    staging:
+      hosts:
+        staging-server:
+          # EC2 instance connection details
+          ansible_host: "{{ lookup('env', 'EC2_HOST') | default('REPLACE_WITH_EC2_IP') }}"
+          ansible_user: ubuntu
+          ansible_ssh_private_key_file: "{{ lookup('env', 'HOME') }}/.ssh/tlef-create-staging.pem"
+          ansible_python_interpreter: /usr/bin/python3
+
+          # Server configuration
+          server_name: tlef-staging
+          environment: staging
+
+          # AWS configuration
+          aws_region: us-west-2
+          ecr_frontend_repo: "{{ lookup('env', 'ECR_FRONTEND_REPOSITORY') | default('') }}"
+          ecr_backend_repo: "{{ lookup('env', 'ECR_BACKEND_REPOSITORY') | default('') }}"
+
+          # Kubernetes configuration
+          k3s_version: v1.28.3+k3s1
+          kubectl_version: v1.28.0
+          helm_version: v3.13.0
+
+          # ArgoCD configuration
+          argocd_version: stable
+          argocd_namespace: argocd
+          argocd_admin_password: "{{ lookup('env', 'ARGOCD_ADMIN_PASSWORD') | default('') }}"
+
+          # Application configuration
+          app_namespace: tlef-staging
+          git_repo: https://github.com/fanxiaotuGod/tlef-create.git
+          git_branch: staging
+
+          # Monitoring configuration
+          enable_prometheus: true
+          enable_grafana: true
+          grafana_admin_password: "{{ lookup('env', 'GRAFANA_PASSWORD') | default('admin') }}"
+
+  vars:
+    # Common variables for all hosts
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'

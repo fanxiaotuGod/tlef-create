@@ -1,0 +1,71 @@
+---
+# K3s Installation and Configuration Tasks
+
+- name: Check if K3s is already installed
+  stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Install K3s
+  shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --write-kubeconfig-mode=644" sh -
+  when: not k3s_binary.stat.exists
+  register: k3s_install
+
+- name: Wait for K3s to be ready
+  wait_for:
+    path: /etc/rancher/k3s/k3s.yaml
+    timeout: 300
+  when: k3s_install is changed
+
+- name: Ensure .kube directory exists for ubuntu user
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: '0755'
+
+- name: Copy kubeconfig to ubuntu user
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /home/ubuntu/.kube/config
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+    remote_src: yes
+
+- name: Set KUBECONFIG environment variable
+  lineinfile:
+    path: /home/ubuntu/.bashrc
+    line: 'export KUBECONFIG=/home/ubuntu/.kube/config'
+    create: yes
+    owner: ubuntu
+    group: ubuntu
+
+- name: Add kubectl alias
+  lineinfile:
+    path: /home/ubuntu/.bashrc
+    line: 'alias k=kubectl'
+    create: yes
+    owner: ubuntu
+    group: ubuntu
+
+- name: Wait for node to be ready
+  shell: kubectl wait --for=condition=ready node --all --timeout=300s
+  register: node_ready
+  retries: 3
+  delay: 10
+  until: node_ready.rc == 0
+  changed_when: false
+
+- name: Get K3s node status
+  shell: kubectl get nodes
+  register: k3s_nodes
+  changed_when: false
+
+- name: Display K3s status
+  debug:
+    msg:
+      - "✅ K3s installed and configured successfully!"
+      - "{{ k3s_nodes.stdout_lines }}"

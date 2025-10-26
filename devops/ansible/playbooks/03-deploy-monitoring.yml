@@ -1,0 +1,22 @@
+---
+# Deploy Monitoring Stack
+# This playbook sets up Prometheus and Grafana for observability
+
+- name: Deploy Monitoring Stack
+  hosts: staging
+  become: yes
+  gather_facts: yes
+
+  roles:
+    - role: monitoring
+      tags: ['monitoring', 'prometheus', 'grafana']
+
+  post_tasks:
+    - name: Display monitoring access information
+      debug:
+        msg:
+          - "✅ Monitoring stack deployed successfully!"
+          - "Access Grafana:"
+          - "  URL: http://{{ ansible_host }}:{{ grafana_nodeport | default('Check with kubectl') }}"
+          - "  Username: admin"
+          - "  Password: {{ grafana_admin_password | default('admin') }}"

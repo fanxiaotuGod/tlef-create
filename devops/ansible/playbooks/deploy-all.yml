@@ -1,0 +1,64 @@
+---
+# Complete Deployment Playbook
+# This is the master playbook that runs all deployment steps in order
+
+- name: Complete TLEF-CREATE Staging Deployment
+  hosts: staging
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Display deployment start message
+      debug:
+        msg:
+          - "🚀 Starting complete TLEF-CREATE staging deployment"
+          - "Server: {{ inventory_hostname }}"
+          - "Environment: {{ environment }}"
+
+# Step 1: Initial setup
+- import_playbook: 01-initial-setup.yml
+  tags: ['setup']
+
+# Step 2: Deploy ArgoCD
+- import_playbook: 02-deploy-argocd.yml
+  tags: ['argocd']
+
+# Step 3: Deploy monitoring
+- import_playbook: 03-deploy-monitoring.yml
+  tags: ['monitoring']
+
+# Final steps
+- name: Post-deployment tasks
+  hosts: staging
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Wait for all pods to be ready
+      shell: |
+        kubectl wait --for=condition=ready pod --all -n {{ app_namespace }} --timeout=300s || true
+      register: pods_ready
+      changed_when: false
+
+    - name: Get all resources
+      shell: kubectl get all -n {{ app_namespace }}
+      register: all_resources
+      changed_when: false
+
+    - name: Display final deployment status
+      debug:
+        msg:
+          - "🎉 ═══════════════════════════════════════════════════════"
+          - "🎉 TLEF-CREATE Staging Deployment Complete!"
+          - "🎉 ═══════════════════════════════════════════════════════"
+          - ""
+          - "📍 Server: {{ ansible_host }}"
+          - "🔧 Environment: {{ environment }}"
+          - ""
+          - "☸️  Kubernetes Resources:"
+          - "{{ all_resources.stdout_lines }}"
+          - ""
+          - "Next steps:"
+          - "1. Access ArgoCD UI to deploy application"
+          - "2. Access Grafana for monitoring"
+          - "3. Verify all pods are running"
