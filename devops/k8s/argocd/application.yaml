@@ -26,21 +26,11 @@ spec:
         - values.yaml
 
       # Helm values as a block of yaml
+      # Removed inline overrides - values.yaml has correct configuration
       values: |
         global:
           environment: staging
           domain: "" # Set this to your domain or leave empty
-
-        # Image repositories will be set by Terraform outputs
-        frontend:
-          image:
-            repository: ""  # Will be updated by CI/CD
-            tag: "latest"   # Will be updated by CI/CD
-
-        backend:
-          image:
-            repository: ""  # Will be updated by CI/CD
-            tag: "latest"   # Will be updated by CI/CD
 
   # Destination cluster and namespace
   destination:
