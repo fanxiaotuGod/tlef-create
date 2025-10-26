@@ -97,47 +97,13 @@ router.post('/upload', authenticateToken, upload.array('files', 10), asyncHandle
       await folder.addMaterial(material._id);
       console.log(`📁 Material added to folder: ${folder.name}`);
 
-      // Process material immediately (bypass broken job queue)
+      // Mark as processing and add to persistent job queue
       await material.markAsProcessing();
-      console.log(`🔄 Processing material immediately: ${material.name}`);
+      console.log(`🔄 Adding material to persistent job queue: ${material.name}`);
 
-      // Process in background without blocking the response
-      setImmediate(async () => {
-        try {
-          const ragService = (await import('../services/ragService.js')).default;
-
-          console.log(`🔄 Chunking and embedding material: ${material.name}`);
-          const result = await ragService.processAndEmbedMaterial(material);
-
-          if (result.success) {
-            const Material = (await import('../models/Material.js')).default;
-            const updatedMaterial = await Material.findById(material._id);
-            if (updatedMaterial) {
-              await updatedMaterial.markAsCompleted();
-              console.log(`✅ Material processed and embedded: ${material.name}`);
-              console.log(`📊 Created ${result.chunksCount} chunks`);
-            }
-          } else {
-            const Material = (await import('../models/Material.js')).default;
-            const updatedMaterial = await Material.findById(material._id);
-            if (updatedMaterial) {
-              await updatedMaterial.markAsFailed(result.error);
-            }
-            console.error(`❌ Failed to process material: ${result.error}`);
-          }
-        } catch (error) {
-          console.error(`❌ Material processing failed: ${material.name}`, error);
-          try {
-            const Material = (await import('../models/Material.js')).default;
-            const updatedMaterial = await Material.findById(material._id);
-            if (updatedMaterial) {
-              await updatedMaterial.markAsFailed(error);
-            }
-          } catch (updateError) {
-            console.error('Failed to update material status:', updateError);
-          }
-        }
-      });
+      // Add to persistent job queue that survives pod restarts
+      const jobQueue = (await import('../services/persistentJobQueue.js')).default;
+      await jobQueue.addMaterialProcessingJob(material._id, material);
 
       materials.push(material);
     } catch (error) {
@@ -481,6 +447,32 @@ router.post('/processing/cleanup', authenticateToken, asyncHandler(async (req, r
     cleaned: cleanedCount,
     maxAge: maxAge
   }, `Cleaned up ${cleanedCount} old processing jobs`);
+}));
+
+/**
+ * Get processing queue status
+ */
+router.get('/processing-status', authenticateToken, asyncHandler(async (req, res) => {
+  try {
+    const jobQueue = (await import('../services/persistentJobQueue.js')).default;
+    const status = jobQueue.getStatus();
+    const pendingJobs = await jobQueue.getPendingJobs();
+    
+    return successResponse(res, {
+      isProcessing: status.isProcessing,
+      currentJob: status.currentJob,
+      queueLength: pendingJobs.length,
+      pendingJobs: pendingJobs.map(job => ({
+        id: job.id,
+        materialName: job.materialData?.name,
+        createdAt: job.createdAt,
+        attempts: job.attempts
+      }))
+    });
+  } catch (error) {
+    console.error('❌ Error getting processing status:', error);
+    return errorResponse(res, 'Failed to get processing status', 'PROCESSING_STATUS_ERROR');
+  }
 }));
 
 export default router;
