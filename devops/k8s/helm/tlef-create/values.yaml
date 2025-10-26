@@ -11,7 +11,7 @@ frontend:
   enabled: true
   replicaCount: 1
   image:
-    repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend" # Will be set by Terraform output (e.g., 123456789.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend)
+    repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend"
     tag: "staging-6145bfe" # Will be updated by CI/CD with git SHA
     pullPolicy: Always
   service:
@@ -35,9 +35,8 @@ backend:
   enabled: true
   replicaCount: 1
   image:
-    repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend" # Will be set by Terraform output
-    tag: "staging-6145bfe" # Will be updated by CI/CD with git SHA
-    pullPolicy: Always
+    repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-backend"
+    tag: "latest" # Will be updated by CI/CD with git SHA
   service:
     type: ClusterIP
     port: 8051
