@@ -37,9 +37,11 @@ spec:
                   key: mongodb-password
             - name: MONGO_INITDB_DATABASE
               value: {{ .Values.mongodb.auth.database | quote }}
+          {{- if .Values.mongodb.persistence.enabled }}
           volumeMounts:
             - name: data
               mountPath: /data/db
+          {{- end }}
           resources:
             {{- toYaml .Values.mongodb.resources | nindent 12 }}
           livenessProbe:

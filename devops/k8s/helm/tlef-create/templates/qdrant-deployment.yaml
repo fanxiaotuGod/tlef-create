@@ -34,9 +34,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "tlef-create.fullname" . }}-secrets
                   key: qdrant-api-key
+          {{- if .Values.qdrant.persistence.enabled }}
           volumeMounts:
             - name: storage
               mountPath: /qdrant/storage
+          {{- end }}
           resources:
             {{- toYaml .Values.qdrant.resources | nindent 12 }}
   {{- if .Values.qdrant.persistence.enabled }}
