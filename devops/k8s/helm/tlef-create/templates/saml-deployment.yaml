@@ -19,6 +19,8 @@ spec:
         {{- include "tlef-create.selectorLabels" . | nindent 8 }}
         component: saml
     spec:
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: saml
           image: "{{ .Values.saml.image.repository }}:{{ .Values.saml.image.tag }}"

@@ -8,7 +8,7 @@ global:
 
 # Frontend configuration
 frontend:
-  enabled: false  # PHASE 2: Enable after databases are healthy
+  enabled: true  # ENABLED: Databases are healthy, backend is running
   replicaCount: 1
   image:
     repository: "396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-frontend"
@@ -121,11 +121,11 @@ qdrant:
 
 # SAML configuration
 saml:
-  enabled: false  # PHASE 3: Enable after application layer is healthy
+  enabled: true  # ENABLED: Application layer is healthy, enabling SAML
   image:
-    repository: kenchan0130/simplesamlphp
-    tag: "2.2.2"
-    pullPolicy: IfNotPresent
+    repository: 396913700179.dkr.ecr.us-west-2.amazonaws.com/tlef-create-saml
+    tag: "latest"
+    pullPolicy: Always
   service:
     type: ClusterIP
     port: 8080

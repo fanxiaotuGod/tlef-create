@@ -17,10 +17,11 @@ const connectDB = async () => {
       const username = process.env.MONGODB_USERNAME || 'tlef-app';
       const password = process.env.MONGODB_PASSWORD || 'tlef-app-2024';
       const database = process.env.MONGODB_DATABASE || 'tlef-create';
-      mongoUri = `mongodb://${username}:${password}@${host}:${port}/${database}`;
+      // IMPORTANT: authSource=admin is required for root users in MongoDB
+      mongoUri = `mongodb://${username}:${password}@${host}:${port}/${database}?authSource=admin`;
     } else {
-      // Default for local development
-      mongoUri = 'mongodb://tlef-app:tlef-app-2024@localhost:27017/tlef-create';
+      // Default for local development (assumes local MongoDB with same auth pattern)
+      mongoUri = 'mongodb://tlef-app:tlef-app-2024@localhost:27017/tlef-create?authSource=admin';
     }
     const conn = await mongoose.connect(mongoUri, {
       // Mongoose 7+ doesn't need most options as they're defaults

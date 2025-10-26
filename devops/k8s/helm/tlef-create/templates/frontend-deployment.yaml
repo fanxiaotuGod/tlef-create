@@ -22,6 +22,8 @@ spec:
         component: frontend
     spec:
       serviceAccountName: {{ include "tlef-create.serviceAccountName" . }}
+      imagePullSecrets:
+        - name: ecr-secret
       containers:
         - name: frontend
           image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
