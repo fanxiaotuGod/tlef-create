@@ -154,7 +154,7 @@ resource "aws_instance" "main" {
 # Elastic IP (Optional)
 resource "aws_eip" "main" {
   count    = var.allocate_elastic_ip ? 1 : 0
-  domain   = "vpc"
+  vpc      = true
   instance = aws_instance.main.id
 
   tags = {
